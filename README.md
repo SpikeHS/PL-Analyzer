@@ -1,4 +1,4 @@
-# PL Analyzer Pro
+# PL Analyzer Prototype
 
 **当前版本：v1.1**
 
