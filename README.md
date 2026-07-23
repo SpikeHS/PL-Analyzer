@@ -2,9 +2,9 @@
 
 **当前版本：v1.1**
 
-PL Analyzer Pro 是面向 MBE 与 III–V 族半导体研究的 Windows 桌面光致发光（PL）分析软件。
+PL Analyzer Pro 是面向 MBE 与 III–V 族半导体研究的光致发光（PL）分析软件。
 项目使用 Python、PySide6（Qt 6）、Matplotlib、NumPy、SciPy、openpyxl 和版本化 JSON，
-按可长期维护的桌面软件工程方式迭代；产品界面不是 Web、Electron、Notebook 或命令行。
+预计长期维护。
 
 当前仓库提供可运行的 v1.1 源码、受版本控制的 PyInstaller 构建链，以及本工作区内已通过
 启动与可视化复核的 `dist/PL Analyzer Pro.exe`。该本机构建尚未代码签名，也不等同于干净
@@ -102,7 +102,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build_release.ps1
 脚本会依次执行全部测试、Ruff、受控清理和 PyInstaller，并输出
 `dist\PL Analyzer Pro.exe` 的大小与 SHA-256。
 
-## 建议工作流
+## 使用方式
 
 1. 拖入一个或多个数据文件，在左侧确认需要显示和分析的样品。
 2. 在 Raw Peak 页同时勾选相关材料，按样品温度、成分和结构修订搜索窗口。
