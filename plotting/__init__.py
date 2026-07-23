@@ -1,0 +1,1 @@
+"""Matplotlib-based plotting components."""

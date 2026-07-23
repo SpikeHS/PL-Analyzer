@@ -1,0 +1,257 @@
+{
+  "schema_version": 2,
+  "database_version": "2026.07",
+  "materials": [
+    {
+      "id": "gaas_300k",
+      "display_name": "GaAs (300 K)",
+      "aliases": ["GaAs", "Gallium Arsenide"],
+      "category": "bulk",
+      "default_selected": true,
+      "reference_temperature_k": 300.0,
+      "nominal_transition_ev": 1.424,
+      "nominal_wavelength_nm": 870.676,
+      "window_basis": "300 K near-band-edge transition",
+      "default_peak_window_nm": {
+        "min_nm": 860.0,
+        "max_nm": 900.0
+      },
+      "extended_peak_window_nm": {
+        "min_nm": 850.0,
+        "max_nm": 920.0
+      },
+      "notes": "Near-band-edge PL around 871 nm at 300 K. Doping, strain, defects and temperature can shift or add bands.",
+      "references": [
+        {
+          "doi": "10.1063/1.1368156",
+          "url": "https://doi.org/10.1063/1.1368156",
+          "basis": "Recommended III-V band parameters; GaAs Eg approximately 1.424 eV at 300 K."
+        },
+        {
+          "doi": "10.1016/0031-8914(67)90062-6",
+          "url": "https://doi.org/10.1016/0031-8914(67)90062-6",
+          "basis": "Temperature dependence of GaAs band gap."
+        }
+      ]
+    },
+    {
+      "id": "algaas_al040_300k",
+      "display_name": "Al₀.₄Ga₀.₆As (300 K)",
+      "aliases": ["AlGaAs", "Al0.4Ga0.6As"],
+      "category": "alloy",
+      "default_selected": true,
+      "reference_temperature_k": 300.0,
+      "nominal_transition_ev": 1.9228,
+      "nominal_wavelength_nm": 644.811,
+      "window_basis": "300 K direct-gap estimate for Al fraction x=0.40",
+      "default_peak_window_nm": {
+        "min_nm": 620.0,
+        "max_nm": 670.0
+      },
+      "extended_peak_window_nm": {
+        "min_nm": 610.0,
+        "max_nm": 690.0
+      },
+      "notes": "Direct-gap Al fraction x=0.40; the approximately 645 nm band-edge estimate is composition-sensitive.",
+      "references": [
+        {
+          "doi": "10.1063/1.1368156",
+          "url": "https://doi.org/10.1063/1.1368156",
+          "basis": "Composition-dependent AlGaAs direct-gap parameters."
+        }
+      ]
+    },
+    {
+      "id": "inp_300k",
+      "display_name": "InP (300 K)",
+      "aliases": ["InP", "Indium Phosphide"],
+      "category": "bulk",
+      "default_selected": false,
+      "reference_temperature_k": 300.0,
+      "nominal_transition_ev": 1.344,
+      "nominal_wavelength_nm": 922.501,
+      "window_basis": "300 K near-band-edge PL",
+      "default_peak_window_nm": {
+        "min_nm": 890.0,
+        "max_nm": 970.0
+      },
+      "extended_peak_window_nm": {
+        "min_nm": 870.0,
+        "max_nm": 1000.0
+      },
+      "notes": "Room-temperature near-band-edge PL is reported near 922 nm; the broad window allows typical linewidth and sample-dependent shifts.",
+      "references": [
+        {
+          "doi": "10.1038/srep02275",
+          "url": "https://www.nature.com/articles/srep02275",
+          "basis": "Ambient-temperature InP PL at 921.7-922.2 nm with 29-37 nm FWHM."
+        },
+        {
+          "doi": "10.1016/0031-8914(67)90062-6",
+          "url": "https://doi.org/10.1016/0031-8914(67)90062-6",
+          "basis": "Temperature dependence of InP band gap."
+        }
+      ]
+    },
+    {
+      "id": "ingaas_in053_300k",
+      "display_name": "In₀.₅₃Ga₀.₄₇As / InP (300 K)",
+      "aliases": ["In0.53Ga0.47As", "Lattice-matched InGaAs"],
+      "category": "alloy",
+      "default_selected": false,
+      "reference_temperature_k": 300.0,
+      "nominal_transition_ev": 0.75,
+      "nominal_wavelength_nm": 1653.123,
+      "window_basis": "300 K bulk band gap for lattice-matched composition",
+      "default_peak_window_nm": {
+        "min_nm": 1550.0,
+        "max_nm": 1800.0
+      },
+      "extended_peak_window_nm": {
+        "min_nm": 1500.0,
+        "max_nm": 1850.0
+      },
+      "notes": "Applies to In0.53Ga0.47As lattice matched to InP. Other InGaAs compositions require a different window.",
+      "references": [
+        {
+          "doi": "10.1063/1.322570",
+          "url": "https://doi.org/10.1063/1.322570",
+          "basis": "Measured room-temperature energy gap 0.750 eV, corresponding to approximately 1653 nm."
+        }
+      ]
+    },
+    {
+      "id": "inas_gaas_qd_1300",
+      "display_name": "InAs/GaAs QD (1.3 µm family)",
+      "aliases": ["InAs QD", "InAs/GaAs Quantum Dots"],
+      "category": "nanostructure",
+      "default_selected": false,
+      "reference_temperature_k": 300.0,
+      "nominal_transition_ev": null,
+      "nominal_wavelength_nm": 1300.0,
+      "window_basis": "empirical room-temperature self-assembled QD family",
+      "default_peak_window_nm": {
+        "min_nm": 950.0,
+        "max_nm": 1400.0
+      },
+      "extended_peak_window_nm": {
+        "min_nm": 900.0,
+        "max_nm": 1800.0
+      },
+      "notes": "Structure-dependent window for nominal 1.3 µm InAs/GaAs quantum dots, not a bulk-material band edge.",
+      "references": [
+        {
+          "doi": "10.1002/pssa.201026232",
+          "url": "https://doi.org/10.1002/pssa.201026232",
+          "basis": "Broad room-temperature-related 1.3 µm QD spectra reported over 1156-1339 nm."
+        },
+        {
+          "doi": "10.1016/j.jcrysgro.2003.12.066",
+          "url": "https://doi.org/10.1016/j.jcrysgro.2003.12.066",
+          "basis": "Room-temperature InAs/GaAs QD PL reported at 1.35 µm."
+        }
+      ]
+    },
+    {
+      "id": "inas_ingaas_qd_extended",
+      "display_name": "InAs/InGaAs SRL QD (extended telecom)",
+      "aliases": ["InAs QD with SRL", "DWELL"],
+      "category": "nanostructure",
+      "default_selected": false,
+      "reference_temperature_k": 300.0,
+      "nominal_transition_ev": null,
+      "nominal_wavelength_nm": 1500.0,
+      "window_basis": "empirical strain-reducing-layer QD family",
+      "default_peak_window_nm": {
+        "min_nm": 1250.0,
+        "max_nm": 1600.0
+      },
+      "extended_peak_window_nm": {
+        "min_nm": 900.0,
+        "max_nm": 1800.0
+      },
+      "notes": "Broad structure-dependent window for strain-reducing-layer or dots-in-a-well designs; edit it for the actual epitaxy.",
+      "references": [
+        {
+          "doi": "10.1016/S0022-0248(01)02048-6",
+          "url": "https://doi.org/10.1016/S0022-0248(01)02048-6",
+          "basis": "InAs QDs with InGaAs strain-reducing layers can emit beyond 1.5 µm at room temperature."
+        }
+      ]
+    },
+    {
+      "id": "qd_laser_1300_active_region",
+      "display_name": "InAs/GaAs QD Laser active region (1.3 µm)",
+      "aliases": ["QD Laser", "Quantum Dot Laser"],
+      "category": "device",
+      "default_selected": false,
+      "reference_temperature_k": 300.0,
+      "nominal_transition_ev": null,
+      "nominal_wavelength_nm": 1300.0,
+      "window_basis": "nominal device-family active-region target, not a material constant",
+      "default_peak_window_nm": {
+        "min_nm": 1150.0,
+        "max_nm": 1400.0
+      },
+      "extended_peak_window_nm": {
+        "min_nm": 900.0,
+        "max_nm": 1800.0
+      },
+      "notes": "A device-family window for nominal 1.3 µm QD laser active regions. It is not universal and should be edited for the design.",
+      "references": [
+        {
+          "doi": "10.1063/1.122534",
+          "url": "https://doi.org/10.1063/1.122534",
+          "basis": "Room-temperature 1.31 µm ground-state lasing from an InGaAs/GaAs quantum-dot device."
+        },
+        {
+          "doi": "10.1002/pssa.201026232",
+          "url": "https://doi.org/10.1002/pssa.201026232",
+          "basis": "Representative broad 1.3 µm InAs/GaAs QD emission family."
+        }
+      ]
+    },
+    {
+      "id": "ingaas_variable_composition",
+      "display_name": "InₓGa₁₋ₓAs (custom composition)",
+      "aliases": ["InGaAs", "Indium Gallium Arsenide"],
+      "category": "alloy",
+      "default_selected": false,
+      "reference_temperature_k": null,
+      "nominal_transition_ev": null,
+      "nominal_wavelength_nm": null,
+      "window_basis": "user supplied from composition, strain and temperature",
+      "default_peak_window_nm": null,
+      "extended_peak_window_nm": null,
+      "notes": "No fixed range is scientifically valid without composition, strain and temperature. Enter the calculated or measured range manually.",
+      "references": [
+        {
+          "doi": "10.1063/1.1368156",
+          "url": "https://doi.org/10.1063/1.1368156",
+          "basis": "Composition- and strain-dependent III-V alloy parameters."
+        }
+      ]
+    },
+    {
+      "id": "dbr_structure",
+      "display_name": "DBR structure (custom)",
+      "aliases": ["DBR", "Distributed Bragg Reflector"],
+      "category": "structure",
+      "default_selected": false,
+      "reference_temperature_k": null,
+      "nominal_transition_ev": null,
+      "nominal_wavelength_nm": null,
+      "window_basis": "user supplied for emitting layer or cavity mode",
+      "default_peak_window_nm": null,
+      "extended_peak_window_nm": null,
+      "notes": "A DBR has a reflectance stopband, not a universal intrinsic PL peak. Enter a window for its emitting layers or cavity mode.",
+      "references": [
+        {
+          "doi": "10.1016/j.jlumin.2006.01.303",
+          "url": "https://doi.org/10.1016/j.jlumin.2006.01.303",
+          "basis": "AlAs/(GaAs/AlAs) DBR center wavelength changes with optical layer thickness, so no universal PL window is valid."
+        }
+      ]
+    }
+  ]
+}

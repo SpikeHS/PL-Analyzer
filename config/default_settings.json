@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "analysis": {
+    "relative_prominence": 0.02,
+    "noise_sigma_factor": 3.0,
+    "min_distance_nm": 0.5,
+    "max_peaks": 20,
+    "gap_factor": 10.0
+  },
+  "plot": {
+    "amplitude_mode": "raw",
+    "offset_enabled": false,
+    "y_scale": "linear",
+    "legend_visible": true,
+    "grid_visible": true
+  }
+}
