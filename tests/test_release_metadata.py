@@ -9,11 +9,12 @@ from pathlib import Path
 from core import __version__
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "1.1.1"
+EXPECTED_VERSION = "1.1.2"
 EXPECTED_TARGETS = {
     "en-US": ("main.py", "version_info.txt"),
     "zh-CN": ("main_zh.py", "version_info_zh_CN.txt"),
 }
+EXPECTED_ORIGIN_COMMIT = "c34980b82947af3f82f7a9a4ff5692610ba5398f"
 
 
 def test_core_and_spec_share_the_release_version() -> None:
@@ -35,8 +36,8 @@ def test_windows_version_resources_match_each_release_artifact() -> None:
         resource_text = resource_path.read_text(encoding="utf-8")
         artifact_name = f"PL-Analyzer-Pro-v{EXPECTED_VERSION}-Windows-x64-{language}.exe"
 
-        assert "filevers=(1, 1, 1, 0)" in resource_text
-        assert "prodvers=(1, 1, 1, 0)" in resource_text
+        assert "filevers=(1, 1, 2, 0)" in resource_text
+        assert "prodvers=(1, 1, 2, 0)" in resource_text
         assert _string_struct_value(resource_text, "FileVersion") == EXPECTED_VERSION
         assert _string_struct_value(resource_text, "ProductVersion") == EXPECTED_VERSION
         assert _string_struct_value(resource_text, "OriginalFilename") == artifact_name
@@ -54,6 +55,64 @@ def test_build_script_declares_bilingual_gates_and_manifest() -> None:
     assert "-m ruff format --check ." in script
     assert "PL_ANALYZER_PRO_SMOKE_EXIT_MS" in script
     assert "SHA256SUMS.txt" in script
+
+
+def test_build_script_publishes_and_hashes_complete_origin_notices() -> None:
+    """The public release must expose provenance, NOTICE, and the full license."""
+
+    script = (PROJECT_ROOT / "build_release.ps1").read_text(encoding="utf-8")
+
+    required_markers = (
+        "THIRD-PARTY-NOTICES.txt",
+        "quantized-lab Origin worksheet reader subset",
+        "Upstream version: 0.11.0",
+        EXPECTED_ORIGIN_COMMIT,
+        "https://github.com/pquarterman17/quantized/tree/v0.11.0",
+        "License: Apache License 2.0",
+        "not GPL liborigin",
+        "UPSTREAM.md",
+        "NOTICE",
+        "LICENSE",
+        "$upstreamText",
+        "$noticeText",
+        "$licenseText",
+        "$releaseAssetPaths = @($artifactPaths) + @($thirdPartyNoticesPath)",
+        "foreach ($assetPath in ($releaseAssetPaths | Sort-Object))",
+    )
+
+    for marker in required_markers:
+        assert marker in script
+
+    assert "[System.IO.File]::ReadAllText" in script
+    assert "----- UPSTREAM PROVENANCE AND MODIFICATION NOTES (UPSTREAM.md) -----" in script
+    assert "----- UPSTREAM NOTICE -----" in script
+    assert "----- APACHE LICENSE 2.0 -----" in script
+
+
+def test_v112_release_documents_disclose_origin_scope_and_license() -> None:
+    """Release-facing documents must retain the native-reader support boundary."""
+
+    documents = (
+        PROJECT_ROOT / "README.md",
+        PROJECT_ROOT / "docs" / "development.md",
+        PROJECT_ROOT / "docs" / "release_v1.1.2.md",
+    )
+    combined = "\n".join(path.read_text(encoding="utf-8") for path in documents)
+
+    required_markers = (
+        "THIRD-PARTY-NOTICES.txt",
+        "quantized-lab",
+        "v0.11.0",
+        EXPECTED_ORIGIN_COMMIT,
+        "Apache-2.0",
+        "liborigin",
+        "Origin/COM",
+        "worksheet",
+        "float32",
+        "OPJU",
+    )
+    for marker in required_markers:
+        assert marker in combined
 
 
 def _literal_spec_assignments() -> dict[str, object]:

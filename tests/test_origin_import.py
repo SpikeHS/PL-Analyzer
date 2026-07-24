@@ -12,6 +12,7 @@ import numpy as np
 import pytest
 
 from core.errors import DataImportError
+from core.importing._origin_parser import read_origin_books
 from core.importing.origin_backend import (
     BundledOriginBackend,
     OriginColumn,
@@ -240,10 +241,142 @@ def test_bundled_backend_maps_parser_metadata_without_leaking_parser_types(
     worksheets = BundledOriginBackend(loader=lambda _path: [book]).read_project(source)
 
     assert len(worksheets) == 1
-    assert worksheets[0].name == "PL / 300 K / VN2696"
+    assert worksheets[0].name == "PL / 300 K / VN2696 [Book1]"
     assert [column.short_name for column in worksheets[0].columns] == ["A", "B", "C"]
     assert [column.designation for column in worksheets[0].columns] == ["X", "Y", "Y"]
     assert worksheets[0].columns[0].values == (750.0, 751.0, 752.0)
+    assert worksheets[0].x_column_recovered is True
+
+
+@pytest.mark.parametrize(
+    ("short_name", "label", "designations"),
+    [
+        ("time", "Time", {}),
+        ("Fit", "Fit", {"Fit": "X"}),
+    ],
+)
+def test_bundled_backend_rejects_ambiguous_assumed_x_axes(
+    tmp_path: Path,
+    short_name: str,
+    label: str,
+    designations: dict[str, str],
+) -> None:
+    book = SimpleNamespace(
+        time=np.asarray([1.0, 2.0, 3.0]),
+        values=np.asarray([[1.0], [2.0], [1.0]]),
+        labels=("Signal",),
+        units=("[mV]",),
+        metadata={
+            "origin_book": "Data1",
+            "origin_book_long": "BA",
+            "x_column_name": short_name,
+            "x_column_long": label,
+            "x_column_unit": "",
+            "origin_column_names": ["B"],
+            "column_designations": designations,
+            "x_column_recovered": True,
+        },
+    )
+
+    worksheet = BundledOriginBackend(loader=lambda _path: [book]).read_project(
+        tmp_path / "ambiguous.opj"
+    )[0]
+
+    assert worksheet.name == "BA [Data1]"
+    assert worksheet.columns[0].designation == designations.get(short_name)
+    assert worksheet.x_column_recovered is False
+
+
+@pytest.mark.parametrize(
+    ("short_name", "label", "unit"),
+    [
+        ("A", "Wavelength", ""),
+        ("A", "波长", ""),
+        ("λ", "λ", ""),
+        ("A", "A", "[nm]"),
+    ],
+)
+def test_bundled_backend_accepts_strong_wavelength_semantics_without_designation(
+    tmp_path: Path,
+    short_name: str,
+    label: str,
+    unit: str,
+) -> None:
+    book = SimpleNamespace(
+        time=np.asarray([860.0, 870.0, 880.0]),
+        values=np.asarray([[1.0], [4.0], [1.0]]),
+        labels=("Signal",),
+        units=("[mV]",),
+        metadata={
+            "origin_book": "Book1",
+            "x_column_name": short_name,
+            "x_column_long": label,
+            "x_column_unit": unit,
+            "origin_column_names": ["B"],
+            "column_designations": {},
+            "x_column_recovered": True,
+        },
+    )
+
+    worksheet = BundledOriginBackend(loader=lambda _path: [book]).read_project(
+        tmp_path / "semantic.opj"
+    )[0]
+
+    assert worksheet.columns[0].designation is None
+    assert worksheet.x_column_recovered is True
+
+
+def test_bundled_backend_preserves_explicit_x_for_generic_column_name(
+    tmp_path: Path,
+) -> None:
+    book = SimpleNamespace(
+        time=np.asarray([860.0, 870.0, 880.0]),
+        values=np.asarray([[1.0], [4.0], [1.0]]),
+        labels=("B",),
+        units=("",),
+        metadata={
+            "origin_book": "Book1",
+            "x_column_name": "A",
+            "x_column_long": "A",
+            "x_column_unit": "",
+            "origin_column_names": ["B"],
+            "column_designations": {"A": "X", "B": "Y"},
+            "x_column_recovered": True,
+        },
+    )
+
+    worksheet = BundledOriginBackend(loader=lambda _path: [book]).read_project(
+        tmp_path / "designated.opj"
+    )[0]
+
+    assert worksheet.columns[0].designation == "X"
+    assert worksheet.x_column_recovered is True
+
+
+def test_bundled_backend_never_overrides_parser_unrecovered_axis(
+    tmp_path: Path,
+) -> None:
+    book = SimpleNamespace(
+        time=np.asarray([0.0, 1.0, 2.0]),
+        values=np.asarray([[860.0, 1.0], [870.0, 4.0], [880.0, 1.0]]),
+        labels=("Wavelength", "Signal"),
+        units=("[nm]", "[mV]"),
+        metadata={
+            "origin_book": "Book1",
+            "x_column_name": "",
+            "x_column_long": "Row",
+            "x_column_unit": "",
+            "origin_column_names": ["A", "B"],
+            "column_designations": {"A": "X", "B": "Y"},
+            "x_column_recovered": False,
+        },
+    )
+
+    worksheet = BundledOriginBackend(loader=lambda _path: [book]).read_project(
+        tmp_path / "unrecovered.opj"
+    )[0]
+
+    assert worksheet.x_column_recovered is False
 
 
 def test_bundled_backend_contains_parser_failures(tmp_path: Path) -> None:
@@ -264,20 +397,23 @@ def test_default_registry_advertises_both_origin_extensions() -> None:
     assert ".opju" in extensions
 
 
-def test_bundled_parser_decodes_synthetic_legacy_opj(tmp_path: Path) -> None:
+def test_vendored_parser_decodes_synthetic_legacy_opj(tmp_path: Path) -> None:
     source = tmp_path / "legacy.OPJ"
     source.write_bytes(_synthetic_opj())
 
-    sheets = ReaderRegistry().read(source)
+    books = read_origin_books(source)
 
-    assert len(sheets) == 1
-    assert sheets[0].name == "Book1"
-    assert sheets[0].rows == (
-        ("A", "B"),
-        (860.0, 1.0),
-        (870.0, 4.0),
-        (880.0, 1.0),
-    )
+    assert len(books) == 1
+    np.testing.assert_allclose(books[0].time, [860.0, 870.0, 880.0])
+    np.testing.assert_allclose(books[0].values[:, 0], [1.0, 4.0, 1.0])
+    assert books[0].labels == ("B",)
+    assert books[0].metadata["origin_book"] == "Book1"
+    assert books[0].metadata["column_designations"] == {}
+
+    report = SpectrumImportService().import_paths([source])
+
+    assert not report.spectra
+    assert [issue.code for issue in report.issues] == ["E_IMPORT_ORIGIN_X_COLUMN"]
 
 
 def test_vendored_origin_parser_has_no_unapproved_runtime_dependencies() -> None:

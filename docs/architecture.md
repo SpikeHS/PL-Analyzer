@@ -1,4 +1,4 @@
-# PL Analyzer Pro v1.1.1 架构
+# PL Analyzer Pro v1.1.2 架构
 
 ## 1. 架构目标
 

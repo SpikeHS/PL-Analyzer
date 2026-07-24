@@ -73,7 +73,7 @@ NavigationToolbar 的 Python 定义文本由 `SpectrumPlotWidget` 显式翻译�
 | --- | --- |
 | Column detector | 中英文表头、无表头数值回退、排序、重复波长合并 |
 | Import service | GB18030 CSV、多 Sheet XLSX、XLS 适配器、局部失败 |
-| Origin import | CPYA/CPYUA 签名、多 workbook/worksheet、Signal+Baseline、损坏文件恢复 |
+| Origin import | CPYA/CPYUA 签名、多 workbook/worksheet、Signal+Baseline、可检测解析失败隔离 |
 | Raw Peak | 精确峰、非等间隔 FWHM、平台峰、缺失值、边界峰、物理 nm 间距 |
 | Material configuration | schema v2、默认/扩展窗口、空窗口结构条目 |
 | Workspace/export | 唯一样品名/颜色、材料标签聚合、XLSX 结果往返 |
@@ -191,19 +191,31 @@ HTTP(S) 链接具有合法绝对 URI；如开发机安装了 markdownlint，可�
 
 `build_release.ps1 -Language all` 与 `PLAnalyzerPro.spec` 提供可重复的英文/简体中文
 一文件 Windows 构建。两个目标使用隔离 workpath，并在生成后分别执行定时启动 smoke test；
-详情见 [v1.1.1 双语言发布说明](release_v1.1.1.md)。正式对外签发仍需：
+脚本还从受版本控制的来源逐字收集完整 `LICENSE`、`NOTICE` 与 `UPSTREAM.md`，生成公开的
+`dist/THIRD-PARTY-NOTICES.txt`。最终 `SHA256SUMS.txt` 必须覆盖两个 EXE 和该声明文件。
+详情见 [v1.1.2 Origin 原生导入发布说明](release_v1.1.2.md)。
+
+Origin 导入采用固定到 `quantized-lab` v0.11.0、提交
+`c34980b82947af3f82f7a9a4ff5692610ba5398f` 的 Apache-2.0 clean-room
+workbook/worksheet reader subset。它不依赖 Origin/COM，不包含上游 Web 服务，也没有使用或
+包含 GPL `liborigin` 代码。绝对包导入改为私有包相对导入、调度 facade 和 Ruff 兼容标注等
+本地修改必须继续记录在 `UPSTREAM.md`。
+
+正式对外签发仍需：
 
 1. 最终产品图标、代码签名和可验证的发布证书链；
 2. 将 `config/materials.json`、`config/default_settings.json`、内置 Origin 解析模块及源码
-   内 `core/importing/_origin_parser/LICENSE`、`core/importing/_origin_parser/NOTICE`
+   内 `core/importing/_origin_parser/LICENSE`、`core/importing/_origin_parser/NOTICE`、
+   `core/importing/_origin_parser/UPSTREAM.md`
    正确打入包；当前 PyInstaller 目标路径是 `licenses/quantized-origin`，并须保证第三方声明
-   可由最终用户访问；
+   也通过 Release 附件 `THIRD-PARTY-NOTICES.txt` 可由最终用户直接访问；
 3. 干净 Windows 10/11 环境启动；
-4. 在没有 Python、Origin 和 Origin COM 注册的环境中，使用英文/中文 EXE 分别导入 OPJ
+4. 在没有 Python、Origin/COM 注册的环境中，使用英文/中文 EXE 分别导入 OPJ
    与 OPJU，并复核多 worksheet 和 Signal+Baseline 语义；
 5. CSV/XLSX/XLS 导入、Raw Peak、四模型拟合、`.plproj` 往返和全部导出格式验收；
 6. 无开发环境时的错误日志、崩溃恢复和杀毒软件误报检查；
-7. 记录构建工具版本、产物哈希、解析器固定提交、第三方许可证清单和签名状态。
+7. 核对 `SHA256SUMS.txt` 有且仅有两个 EXE 和 `THIRD-PARTY-NOTICES.txt` 三条记录；
+8. 记录构建工具版本、产物哈希、解析器固定提交、第三方许可证清单和签名状态。
 
-开发机 EXE 可作为 v1.1.1 可运行交付物，但不得把它描述为已签名或已完成跨机认证的正式
+开发机 EXE 可作为 v1.1.2 可运行交付物，但不得把它描述为已签名或已完成跨机认证的正式
 安装包。
