@@ -1,5 +1,6 @@
 # Vendored from quantized-lab v0.11.0 (c34980b82947af3f82f7a9a4ff5692610ba5398f).
-# Modified by PL Analyzer Pro only to use the local relative import namespace.
+# Modified by PL Analyzer Pro for local imports and legacy CPYA compatibility.
+# See UPSTREAM.md for the complete modification record.
 # ruff: noqa: I001, UP047
 """Read Origin ``.opj`` (CPYA) projects: worksheet data + column names/units.
 
@@ -92,10 +93,14 @@ def _columns(
     for size, payload in walk_blocks(b):
         if size == 0:
             continue
-        if size % 10 != 0:  # a column-header block (never a multiple of 10)
-            m = NAME_RE.search(payload)
-            pending = m.group(1).decode("latin1") if m else pending
-        elif pending is not None and size >= 10:  # the paired data block
+        if (name := _dataset_name(payload)) is not None:
+            # CPYA 4.2930 uses a 140-byte dataset header. That size is itself
+            # divisible by the 10-byte numeric-record width, so block-size
+            # arithmetic cannot distinguish a header from a data payload.
+            pending = name
+            continue
+        if pending is not None and size >= 10 and size % 10 == 0:
+            # The first non-spacer block after a dataset header is its data.
             vals = decode_doubles(payload)
             # Non-double columns (text/int — plan item 4) reinterpret as float64
             # garbage; drop them rather than emit nonsense. Two tells: absurd
@@ -114,8 +119,36 @@ def _columns(
                 # junk cells (XRD Book6_A) is salvaged with those cells NaN'd;
                 # the report-sheet family must never be stolen into numeric.
                 numeric.append((pending, salvaged))
-            pending = None
+        # A dataset's first non-spacer block is its payload even when its
+        # storage type is unsupported. Clear the name after that one attempt
+        # so it can never be paired with an unrelated later block.
+        pending = None
     return numeric, text, report
+
+
+_DATASET_NAME_OFFSETS = (0x57, 0x58)
+
+
+def _dataset_name(payload: bytes) -> str | None:
+    """Return a structurally located CPYA dataset name, if present.
+
+    Origin stores the NUL-terminated ``<Book>_<Column>[@sheet]`` field at
+    offset ``0x58`` (``0x57`` in the oldest 3.5 family). Matching only those
+    fields avoids treating graph-curve blocks such as ``SPC_<Column>`` as
+    worksheet headers. The detector intentionally does not use header size:
+    supported projects contain both 140-byte and 147-byte header variants.
+    """
+    if (
+        len(payload) <= _DATASET_NAME_OFFSETS[-1]
+        or payload[:2] != b"\x00\x00"
+        or payload[2] not in (0, 1)
+    ):
+        return None
+    for offset in _DATASET_NAME_OFFSETS:
+        match = NAME_RE.match(payload, offset)
+        if match is not None:
+            return match.group(1).decode("latin1")
+    return None
 
 
 _PRINTABLE = frozenset(range(0x20, 0x7F)) | {0x09, 0x0A, 0x0D}
@@ -210,10 +243,18 @@ def _book_long_name(book: str, books_meta: dict[str, BookMeta]) -> str:
     """The book's display title (Origin rich-text escapes translated — see
     the module docstring), with a "(sheet N)" suffix for an extra-sheet
     pseudo-book (``Book@N``)."""
+    if book in books_meta:
+        return clean_richtext(books_meta[book].long_name)
     base_book, _, sheet_no = book.partition("@")
     if sheet_no and base_book in books_meta:
         return f"{clean_richtext(books_meta[base_book].long_name)} (sheet {sheet_no})"
-    return clean_richtext(books_meta[book].long_name) if book in books_meta else book
+    return book
+
+
+def _book_sheet_name(book: str, books_meta: dict[str, BookMeta]) -> str:
+    """Return the structural Origin sheet name when the windows stream has one."""
+
+    return books_meta[book].sheet_name if book in books_meta else ""
 
 
 def _build_book(
@@ -251,13 +292,19 @@ def _build_book(
             "source_format": source_format,
             "origin_book": book,
             "origin_book_long": book_long,
+            "origin_sheet_name": _book_sheet_name(book, books_meta),
             "origin_books": inventory,
             "origin_report_sheets": {c: rows for c, rows in (report_cols or [])},
         }
         return DataStruct(time=np.empty(0), values=np.empty((0, 0)), metadata=meta_empty)
 
     base_book, _, sheet_no = book.partition("@")
-    col_meta = books_meta[base_book].columns if base_book in books_meta and not sheet_no else {}
+    if book in books_meta:
+        col_meta = books_meta[book].columns
+    elif not sheet_no and base_book in books_meta:
+        col_meta = books_meta[base_book].columns
+    else:
+        col_meta = {}
     maxlen = max((len(v) for _, v in cols), default=0)
 
     # Locate the independent (X) axis among the DECODED columns. When a book's
@@ -301,6 +348,7 @@ def _build_book(
         "source_format": source_format,
         "origin_book": book,
         "origin_book_long": _book_long_name(book, books_meta),
+        "origin_sheet_name": _book_sheet_name(book, books_meta),
         "origin_books": inventory,
         "x_column_name": "" if x_unrecovered else (ordered[0][0] if ordered else "A"),
         "x_column_long": (

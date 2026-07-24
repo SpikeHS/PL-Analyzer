@@ -1,16 +1,16 @@
 # PL Analyzer Pro
 
-**当前版本：v1.1.2**
+**当前版本：v1.1.3**
 
 PL Analyzer Pro 是面向 MBE 与 III–V 族半导体研究的光致发光（PL）分析软件。
 项目使用 Python、PySide6（Qt 6）、Matplotlib、NumPy、SciPy、openpyxl 和版本化 JSON，
 预计长期维护。
 
-当前仓库提供可运行的 v1.1.2 源码、英文原版和简体中文版共用的 Qt Linguist 翻译架构，
+当前仓库提供可运行的 v1.1.3 源码、英文原版和简体中文版共用的 Qt Linguist 翻译架构，
 以及受版本控制的双目标 PyInstaller 构建链。两个版本使用完全相同的科学算法、材料数据库和
 `.plproj` 工程格式；差异仅限显示语言。发布产物尚未代码签名，也不等同于干净 Windows
 10/11 机器上的正式签发认证；验证证据见
-[v1.1.2 Origin 原生导入发布说明](docs/release_v1.1.2.md)。
+[v1.1.3 旧版 Origin OPJ 兼容发布说明](docs/release_v1.1.3.md)。
 
 ## v1.1 已实现功能
 
@@ -31,6 +31,11 @@ subset，没有引入上游 Web 服务，也没有使用或包含 GPL `liborigin
 `Wavelength + Signal + Baseline` 的 worksheet 只生成一个 Signal 样品，不会把 Baseline
 拆成样品。真实 `PL DATA.opju` 已与五份 DAT 做 `5 × 1,215` 点逐值对照，最大绝对误差为
 `1.78 × 10⁻¹⁵`；这些本地仪器文件未上传。
+
+v1.1.3 进一步支持 CPYA 4.2930 的 140-byte dataset header、341-byte sheet header、
+493-byte column property 和逐 sheet 元数据。真实 1,048,411-byte 仪器 OPJ 已恢复 7 条
+`Wavelength / nm` 光谱（4 × 401 点、3 × 4,001 点），辅助 Graph/Note sheet 不会作为失败
+样品弹警告；该用户数据文件同样未上传。
 
 Apache-2.0 的完整 `LICENSE`、`NOTICE`、固定上游版本、提交和本地修改说明保存在
 `core/importing/_origin_parser/`。PyInstaller 会将其嵌入 `licenses/quantized-origin`；
@@ -121,8 +126,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 脚本会依次执行全部测试、Ruff、受控清理、两个隔离的 PyInstaller 构建和启动 smoke test，
 并输出：
 
-- `dist\PL-Analyzer-Pro-v1.1.2-Windows-x64-en-US.exe`（英文原版）
-- `dist\PL-Analyzer-Pro-v1.1.2-Windows-x64-zh-CN.exe`（简体中文版）
+- `dist\PL-Analyzer-Pro-v1.1.3-Windows-x64-en-US.exe`（英文原版）
+- `dist\PL-Analyzer-Pro-v1.1.3-Windows-x64-zh-CN.exe`（简体中文版）
 - `dist\THIRD-PARTY-NOTICES.txt`（可公开阅读的完整第三方声明）
 - `dist\SHA256SUMS.txt`
 
@@ -166,3 +171,4 @@ v1.1 尚不包含：
 - [v1.1 发布验证记录](docs/release_v1.1.md)
 - [v1.1.1 双语言发布说明](docs/release_v1.1.1.md)
 - [v1.1.2 Origin 原生导入发布说明](docs/release_v1.1.2.md)
+- [v1.1.3 旧版 Origin OPJ 兼容发布说明](docs/release_v1.1.3.md)

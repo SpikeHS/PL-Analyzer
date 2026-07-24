@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 
-PRODUCT_VERSION = "1.1.2"
+PRODUCT_VERSION = "1.1.3"
 BUILD_TARGETS = {
     "en-US": ("main.py", "version_info.txt"),
     "zh-CN": ("main_zh.py", "version_info_zh_CN.txt"),

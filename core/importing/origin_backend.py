@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 import numpy as np
+from numpy.typing import NDArray
 
 from core.errors import DataImportError
 
@@ -101,6 +102,13 @@ def _convert_book(book: Any, *, fallback_name: str) -> OriginWorksheet | None:
     units = tuple(str(value) for value in getattr(book, "units", ()))
     if len(labels) != values.shape[1] or len(units) != values.shape[1]:
         raise ValueError("Origin worksheet column metadata does not match its data shape.")
+    if not _has_minimum_numeric_pairs(time, values) and _is_known_auxiliary_sheet(metadata):
+        # Origin workbooks can contain auxiliary Graph/Note sheets whose
+        # storage blocks look numeric but hold only empty cells or a couple of
+        # control values. Suppress only structurally identified auxiliary
+        # sheets; short real worksheets must continue to normal validation so
+        # the user receives the existing per-sheet data-quality issue.
+        return None
 
     short_names = _string_sequence(metadata.get("origin_column_names"))
     designations = _string_mapping(metadata.get("column_designations"))
@@ -147,6 +155,31 @@ def _convert_book(book: Any, *, fallback_name: str) -> OriginWorksheet | None:
             designation=x_designation,
         ),
     )
+
+
+def _has_minimum_numeric_pairs(
+    time: NDArray[np.float64],
+    values: NDArray[np.float64],
+) -> bool:
+    """Return whether any value column has three finite X/Y pairs."""
+
+    if time.size < 3 or values.shape[1] == 0:
+        return False
+    finite_time = np.isfinite(time)
+    return any(
+        int(np.count_nonzero(finite_time & np.isfinite(values[:, index]))) >= 3
+        for index in range(values.shape[1])
+    )
+
+
+_AUXILIARY_SHEET_NAMES = frozenset({"graph", "note", "notes"})
+
+
+def _is_known_auxiliary_sheet(metadata: Mapping[str, Any]) -> bool:
+    """Return whether parser metadata explicitly identifies a non-data sheet."""
+
+    sheet_name = _text(metadata.get("origin_sheet_name"), "").strip().casefold()
+    return sheet_name in _AUXILIARY_SHEET_NAMES
 
 
 def _metadata(book: Any) -> Mapping[str, Any]:

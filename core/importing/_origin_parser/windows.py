@@ -1,11 +1,12 @@
 # Vendored from quantized-lab v0.11.0 (c34980b82947af3f82f7a9a4ff5692610ba5398f).
-# Modified by PL Analyzer Pro only to use the local relative import namespace.
+# Modified by PL Analyzer Pro for local imports and legacy CPYA compatibility.
+# See UPSTREAM.md for the complete modification record.
 """Extract per-column metadata from the ``.opj`` windows section.
 
 Worksheet *window definitions* live in the same block stream as the column
 data, after the datasets section. Each worksheet window opens with a header
 block (``00 00 <BookShort> 00 …``, long name ending at the ``@${`` storage
-marker) and contains, per column, a **property block** (≥500 B; designation at
+marker) and contains, per column, a **property block** (≥493 B; designation at
 ``0x11``, NUL-terminated short name at ``0x12``) immediately followed by a
 **label-text block** (``LongName\\r\\nUnit\\r\\nComment``, cut at ``@${``).
 Column ``S`` of book ``B`` maps to the dataset named ``"B_S"``.
@@ -16,26 +17,14 @@ A property block's byte 0x06 varies with the column's storage flavour --
 "Parameters"/"Notes"/etc. sheets) -- so it does not distinguish sheet
 identity; both values are accepted (plan item: report-sheet leak fix).
 
-**Multi-sheet books** (a workbook with a report/curve sheet appended after
-the real data, e.g. Origin's FitLinear auto-adds "FitLinear1"/
-"FitLinearCurve1" siblings to the sheet it fits) restart column lettering at
-"A" for each extra sheet, and *also* reuse the very same 0x0B property-block
-shape as a real formula column -- so neither the storage-flavour byte nor a
-short-name repeat is a reliable, early sheet-boundary signal on its own (a
-report sheet's own property/label blocks can front-run a repeat detection
-by many columns). The real signal is a fixed 365-byte **sheet/layer
-sub-header** block carrying ``Pd<Name>\\0`` at a constant offset (0xD0) --
-one appears at the very start of every worksheet sheet (and every graph
-layer, tagged ``Pd1``/``Pd2``/…) inside a window's block span. The *second*
-one seen since the enclosing window header is the true start of sheet 2+;
-everything from there on (property blocks, labels, formulas) is excluded.
-Validated against Moke.opj's ``Book4`` (Sheet1 / FitLinear1 /
-FitLinearCurve1 — three ``Pd...`` markers, one per sheet, exactly bracketing
-each sheet's real column-property-block run) and every single-sheet corpus
-book (exactly one marker, at the window's very start). Older-format (CPYA
-4.3227) files carry no such marker at all; the short-name-repeat guard is
-kept as a fallback for that case (unverified whether any 4.3227 file in the
-corpus has a real multi-sheet book -- none observed to date).
+**Multi-sheet books** restart column lettering at "A" for each sheet. Their
+structural boundary is a sheet/layer sub-header carrying ``Pd<Name>\\0`` at
+offset 0xD0. Current CPYA files use a 365-byte header; legacy CPYA 4.2930
+uses the same marker in a 341-byte header. Each sheet is mapped separately:
+the first to ``<Book>`` and later sheets to ``<Book>@N``, matching the
+dataset-name convention used by ``opj.py``. Older files without a supported
+``Pd`` marker retain the conservative repeated-name guard and expose only
+the first sheet rather than guessing a boundary.
 
 Byte layout validated against the local corpus — see
 ``docs/origin_re/opj_windows_section.md`` (plan item 1).
@@ -76,6 +65,7 @@ class BookMeta:
     short: str
     long_name: str
     columns: dict[str, ColumnMeta] = field(default_factory=dict)
+    sheet_name: str = ""
 
 
 def _cstring(payload: bytes, start: int, limit: int = 48) -> str | None:
@@ -138,25 +128,22 @@ def _is_column_block(payload: bytes) -> bool:
     dropped those 14 silently instead of mapping them).
     """
     return (
-        len(payload) >= 500
-        and payload[0x06] in (0x09, 0x0B)
+        len(payload) >= 493
+        and payload[0x06] & 0x7F in (0x09, 0x0B)
         and payload[0x25] in (0x21, 0x30)  # 0x30 observed on Y-error columns
-        and _cstring(payload, 0x12, 8) is not None
+        and _cstring(payload, 0x12, 17) is not None
     )
 
 
-_SHEET_HEADER_SIZE = 365
+_SHEET_HEADER_SIZES = frozenset((341, 365))
 _SHEET_NAME_OFFSET = 0xD0  # 208: fixed offset of the "Pd<Name>" marker
 
 
 def _is_sheet_header(payload: bytes) -> str | None:
     """A per-sheet (or per-graph-layer) sub-header: the real sheet-boundary
-    signal (see module docstring). Always exactly 365 B, carrying
-    NUL-terminated ``Pd<Name>`` at a fixed offset -- never observed to
-    collide with a window-header or column-property block's size/shape
-    across the local corpus (window headers range 195-359 B in every
-    corpus file; a column-property block is always >=500 B)."""
-    if len(payload) != _SHEET_HEADER_SIZE:
+    signal (see module docstring). Supported containers use a 341-byte or
+    365-byte block carrying NUL-terminated ``Pd<Name>`` at a fixed offset."""
+    if len(payload) not in _SHEET_HEADER_SIZES:
         return None
     if payload[_SHEET_NAME_OFFSET : _SHEET_NAME_OFFSET + 2] != b"Pd":
         return None
@@ -177,38 +164,50 @@ def _label_rows(payload: bytes) -> tuple[str, str, str]:
 def window_metadata(b: bytes) -> dict[str, BookMeta]:
     """Map book short name → :class:`BookMeta` with per-column names/units.
 
-    Only primary-sheet columns are mapped for now (multi-sheet ``@N`` datasets
-    are plan item 5). Graph windows contain no column blocks and drop out
-    naturally.
-
-    A report/curve sheet appended after the primary sheet (Origin's
-    FitLinear/FitNL auto-add, e.g. "FitLinear1"/"FitLinearCurve1") must never
-    reach ``current.columns`` — that dict is the *primary-sheet* map. The
-    ``Pd<Name>`` sheet sub-header (`_is_sheet_header`) is the precise
-    boundary: the second one seen since the enclosing window header closes
-    collection immediately, before that sheet's first property block. The
-    short-name-repeat check stays as a fallback for the older container
-    version that carries no such marker (plan item 5's original guard).
+    ``Pd<Name>`` headers map sheet one to ``<Book>`` and later sheets to
+    ``<Book>@N``. Exact pseudo-book keys let ``opj._build_book`` apply each
+    sheet's own designations, labels, and units. For containers without a
+    recognized marker, a repeated short name still closes collection.
     """
     books: dict[str, BookMeta] = {}
+    window_short: str | None = None
+    window_long = ""
     current: BookMeta | None = None
     pending: tuple[str, str] | None = None  # (short, designation) awaiting label
-    closed = False  # set once the current window moves past its primary sheet
-    sheets_seen = 0  # count of Pd<Name> markers since the current window header
+    closed = False
+    sheets_seen = 0
 
     def commit(long_name: str = "", unit: str = "", comment: str = "") -> None:
         nonlocal pending, closed
         if pending is not None and current is not None and not closed:
             short, desig = pending
             if short in current.columns:
-                # A repeated short means sheet 2+ started (every sheet restarts
-                # at column A); only the primary sheet maps to plain
-                # "<Book>_<Col>" datasets, so stop collecting (plan item 5;
-                # fallback for containers with no Pd<Name> marker).
+                # Conservative fallback for containers with no recognized Pd
+                # marker: a repeat means a later sheet started, but its exact
+                # number cannot be established safely.
                 closed = True
             else:
                 current.columns[short] = ColumnMeta(short, desig, long_name, unit, comment)
         pending = None
+
+    def select_sheet(sheet_name: str) -> None:
+        """Select the exact ``Book``/``Book@N`` metadata target."""
+
+        nonlocal current, closed, sheets_seen
+        if window_short is None:
+            return
+        sheets_seen += 1
+        key = window_short if sheets_seen == 1 else f"{window_short}@{sheets_seen}"
+        if sheets_seen == 1:
+            display_name = window_long
+        else:
+            suffix = f"sheet {sheets_seen}"
+            if sheet_name:
+                suffix = f"{suffix}: {sheet_name}"
+            display_name = f"{window_long} ({suffix})"
+        current = books.setdefault(key, BookMeta(key, display_name))
+        current.sheet_name = sheet_name
+        closed = False
 
     for size, payload in walk_blocks(b):
         if size == 0:
@@ -224,17 +223,15 @@ def window_metadata(b: bytes) -> dict[str, BookMeta]:
                 continue
             commit()  # structural block follows — column had no label text
         if header_name is not None:
-            current = books.setdefault(
-                header_name, BookMeta(header_name, _book_long_name(payload, header_name))
-            )
+            window_short = header_name
+            window_long = _book_long_name(payload, header_name)
+            current = books.setdefault(header_name, BookMeta(header_name, window_long))
             closed = False
             sheets_seen = 0
         elif sheet_name is not None:
-            sheets_seen += 1
-            if sheets_seen > 1:  # the 2nd+ sheet/layer marker: stop mapping columns
-                closed = True
+            select_sheet(sheet_name)
         elif current is not None and is_col and not closed:
-            short = _cstring(payload, 0x12, 8) or "?"
+            short = _cstring(payload, 0x12, 17) or "?"
             pending = (short, _DESIGNATION.get(payload[0x11], "Y"))
     commit()
     return books
