@@ -18,10 +18,21 @@ class TabularSheet:
     rows: tuple[tuple[Any, ...], ...]
 
 
+@dataclass(frozen=True, slots=True)
+class TabularSheetError:
+    """A recoverable failure limited to one sheet inside a readable file."""
+
+    name: str | None
+    error: DataImportError
+
+
+TabularReadResult = TabularSheet | TabularSheetError
+
+
 class TabularReader(Protocol):
     """Structural protocol for registered readers."""
 
-    def read(self, path: Path) -> tuple[TabularSheet, ...]:
+    def read(self, path: Path) -> tuple[TabularReadResult, ...]:
         """Read a file into one or more sheets."""
 
 
@@ -129,12 +140,18 @@ class XlsReader:
 class ReaderRegistry:
     """Map supported extensions to isolated reader implementations."""
 
-    def __init__(self) -> None:
+    def __init__(self, origin_reader: TabularReader | None = None) -> None:
+        if origin_reader is None:
+            from .origin_reader import OriginProjectReader
+
+            origin_reader = OriginProjectReader()
         self._readers: dict[str, TabularReader] = {
             ".csv": CsvReader(),
             ".xlsx": XlsxReader(),
             ".xlsm": XlsxReader(),
             ".xls": XlsReader(),
+            ".opj": origin_reader,
+            ".opju": origin_reader,
         }
 
     @property
@@ -143,7 +160,7 @@ class ReaderRegistry:
 
         return frozenset(self._readers)
 
-    def read(self, path: Path) -> tuple[TabularSheet, ...]:
+    def read(self, path: Path) -> tuple[TabularReadResult, ...]:
         """Dispatch a source file to its registered reader."""
 
         if not path.exists() or not path.is_file():

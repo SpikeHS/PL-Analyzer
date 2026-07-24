@@ -8,7 +8,8 @@ Builds the verified one-file Windows release of PL Analyzer Pro.
 Runs the complete pytest and Ruff gates using the project virtual environment,
 cleans only the exact project-local build and dist directories, builds the
 selected locale targets with isolated PyInstaller work directories, performs
-timed executable smoke tests, and writes dist\SHA256SUMS.txt.
+timed executable smoke tests, publishes the complete third-party notices, and
+writes dist\SHA256SUMS.txt for every release asset except the manifest itself.
 #>
 
 [CmdletBinding()]
@@ -158,6 +159,71 @@ function Invoke-ExecutableSmokeTest {
     }
 }
 
+function Write-ThirdPartyNotices {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$OutputPath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$UpstreamPath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$NoticePath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$LicensePath
+    )
+
+    Assert-RequiredFile -Path $UpstreamPath -Description "Origin reader provenance"
+    Assert-RequiredFile -Path $NoticePath -Description "Origin reader NOTICE"
+    Assert-RequiredFile -Path $LicensePath -Description "Origin reader LICENSE"
+
+    $upstreamText = [System.IO.File]::ReadAllText(
+        $UpstreamPath,
+        [System.Text.Encoding]::UTF8
+    )
+    $noticeText = [System.IO.File]::ReadAllText(
+        $NoticePath,
+        [System.Text.Encoding]::UTF8
+    )
+    $licenseText = [System.IO.File]::ReadAllText(
+        $LicensePath,
+        [System.Text.Encoding]::UTF8
+    )
+
+    $sections = [string[]]@(
+        "PL Analyzer Pro Third-Party Notices",
+        "===================================",
+        "",
+        "Component: quantized-lab Origin worksheet reader subset",
+        "Upstream version: 0.11.0",
+        "Upstream commit: c34980b82947af3f82f7a9a4ff5692610ba5398f",
+        "Upstream: https://github.com/pquarterman17/quantized/tree/v0.11.0",
+        "License: Apache License 2.0",
+        "",
+        "PL Analyzer Pro vendors only the Origin workbook/worksheet-reading subset.",
+        "It does not include the upstream web application or unrelated services.",
+        "Local changes are limited to package-relative import rewrites, a private",
+        "OPJ/OPJU dispatch facade, and file-level Ruff compatibility annotations;",
+        "the parsing algorithms and data contract remain unchanged.",
+        "This component is not GPL liborigin and contains no liborigin code.",
+        "",
+        "----- UPSTREAM PROVENANCE AND MODIFICATION NOTES (UPSTREAM.md) -----",
+        $upstreamText,
+        "",
+        "----- UPSTREAM NOTICE -----",
+        $noticeText,
+        "",
+        "----- APACHE LICENSE 2.0 -----",
+        $licenseText,
+        ""
+    )
+    $content = [string]::Join([System.Environment]::NewLine, $sections)
+    $utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($OutputPath, $content, $utf8WithoutBom)
+    Assert-RequiredFile -Path $OutputPath -Description "Third-party notices release asset"
+}
+
 $projectRoot = Get-NormalizedPath -Path $PSScriptRoot
 $pythonPath = Join-Path $projectRoot ".venv\Scripts\python.exe"
 $specPath = Join-Path $projectRoot "PLAnalyzerPro.spec"
@@ -168,6 +234,11 @@ $materialsPath = Join-Path $projectRoot "config\materials.json"
 $buildDirectory = Join-Path $projectRoot "build"
 $distDirectory = Join-Path $projectRoot "dist"
 $manifestPath = Join-Path $distDirectory "SHA256SUMS.txt"
+$thirdPartyNoticesPath = Join-Path $distDirectory "THIRD-PARTY-NOTICES.txt"
+$originParserDirectory = Join-Path $projectRoot "core\importing\_origin_parser"
+$originUpstreamPath = Join-Path $originParserDirectory "UPSTREAM.md"
+$originNoticePath = Join-Path $originParserDirectory "NOTICE"
+$originLicensePath = Join-Path $originParserDirectory "LICENSE"
 $buildLanguageVariableName = "PL_ANALYZER_PRO_BUILD_LANGUAGE"
 $previousBuildLanguage = [System.Environment]::GetEnvironmentVariable(
     $buildLanguageVariableName,
@@ -187,6 +258,9 @@ Assert-RequiredFile -Path $requirementsPath -Description "Runtime dependency man
 Assert-RequiredFile -Path $requirementsDevPath -Description "Development dependency manifest"
 Assert-RequiredFile -Path $configPath -Description "Default application settings"
 Assert-RequiredFile -Path $materialsPath -Description "Material database"
+Assert-RequiredFile -Path $originUpstreamPath -Description "Origin reader provenance"
+Assert-RequiredFile -Path $originNoticePath -Description "Origin reader NOTICE"
+Assert-RequiredFile -Path $originLicensePath -Description "Origin reader LICENSE"
 
 Push-Location -LiteralPath $projectRoot
 try {
@@ -290,17 +364,24 @@ try {
         )
     }
 
-    Write-Host "[6/6] Running executable smoke tests and writing SHA-256 manifest..."
+    Write-Host "[6/6] Smoke testing, publishing notices, and writing SHA-256 manifest..."
     foreach ($artifactPath in $artifactPaths) {
         Write-Host "Smoke testing $(Split-Path -Leaf $artifactPath)..."
         Invoke-ExecutableSmokeTest -Path $artifactPath
     }
 
+    Write-ThirdPartyNotices `
+        -OutputPath $thirdPartyNoticesPath `
+        -UpstreamPath $originUpstreamPath `
+        -NoticePath $originNoticePath `
+        -LicensePath $originLicensePath
+
+    $releaseAssetPaths = @($artifactPaths) + @($thirdPartyNoticesPath)
     $hashLines = @(
-        foreach ($artifactPath in ($artifactPaths | Sort-Object)) {
-            $artifact = Get-Item -LiteralPath $artifactPath
-            $hash = Get-FileHash -LiteralPath $artifactPath -Algorithm SHA256
-            "{0}  {1}" -f $hash.Hash.ToUpperInvariant(), $artifact.Name
+        foreach ($assetPath in ($releaseAssetPaths | Sort-Object)) {
+            $asset = Get-Item -LiteralPath $assetPath
+            $hash = Get-FileHash -LiteralPath $assetPath -Algorithm SHA256
+            "{0}  {1}" -f $hash.Hash.ToUpperInvariant(), $asset.Name
         }
     )
     $utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
@@ -313,11 +394,11 @@ try {
 
     Write-Host ""
     Write-Host "Release build completed."
-    foreach ($artifactPath in $artifactPaths) {
-        $artifact = Get-Item -LiteralPath $artifactPath
-        $hash = Get-FileHash -LiteralPath $artifactPath -Algorithm SHA256
-        Write-Host "Artifact: $($artifact.FullName)"
-        Write-Host "Size: $($artifact.Length) bytes"
+    foreach ($assetPath in $releaseAssetPaths) {
+        $asset = Get-Item -LiteralPath $assetPath
+        $hash = Get-FileHash -LiteralPath $assetPath -Algorithm SHA256
+        Write-Host "Artifact: $($asset.FullName)"
+        Write-Host "Size: $($asset.Length) bytes"
         Write-Host "SHA256: $($hash.Hash)"
     }
     Write-Host "Manifest: $manifestPath"

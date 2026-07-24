@@ -1,28 +1,43 @@
-# PL Analyzer Prototype
+# PL Analyzer Pro
 
-**当前版本：v1.1.1**
+**当前版本：v1.1.2**
 
 PL Analyzer Pro 是面向 MBE 与 III–V 族半导体研究的光致发光（PL）分析软件。
 项目使用 Python、PySide6（Qt 6）、Matplotlib、NumPy、SciPy、openpyxl 和版本化 JSON，
 预计长期维护。
 
-当前仓库提供可运行的 v1.1.1 源码、英文原版和简体中文版共用的 Qt Linguist 翻译架构，
+当前仓库提供可运行的 v1.1.2 源码、英文原版和简体中文版共用的 Qt Linguist 翻译架构，
 以及受版本控制的双目标 PyInstaller 构建链。两个版本使用完全相同的科学算法、材料数据库和
 `.plproj` 工程格式；差异仅限显示语言。发布产物尚未代码签名，也不等同于干净 Windows
 10/11 机器上的正式签发认证；验证证据见
-[v1.1.1 双语言发布说明](docs/release_v1.1.1.md)。
+[v1.1.2 Origin 原生导入发布说明](docs/release_v1.1.2.md)。
 
 ## v1.1 已实现功能
 
 ### 数据导入与多样品绘图
 
-- 拖拽或文件选择批量导入 CSV、XLSX、XLSM 和旧版 XLS。
-- Excel 中每个可识别 Sheet 独立导入为一个样品；坏文件或坏 Sheet 不会丢失同批成功结果。
+- 拖拽或文件选择批量导入 Origin OPJ/OPJU、CSV、XLSX、XLSM 和旧版 XLS。
+- Origin 与 Excel 中每个可识别 worksheet/Sheet 独立导入；坏文件或坏 Sheet 不会丢失同批
+  成功结果。
 - 根据中英文表头和数值结构自动识别波长列与强度列，无需指定列号。
 - 左侧样品勾选、自动颜色、多样品同轴叠加，以及 Matplotlib 缩放、平移工具栏。
 - Raw、Normalize、Offset、Linear、Log、Legend 和 Grid；显示变换不会覆盖原始数组。
 
 `.xlsx/.xlsm` 由 `openpyxl` 读取；旧二进制 `.xls` 由隔离的 `xlrd` 适配器读取。
+OPJ/OPJU 由固定在 `quantized-lab` v0.11.0、提交
+`c34980b82947af3f82f7a9a4ff5692610ba5398f` 的内置 Apache-2.0 clean-room worksheet
+解析器读取，不需要安装或启动 Origin/COM。仓库只 vendored 其 workbook/worksheet reader
+subset，没有引入上游 Web 服务，也没有使用或包含 GPL `liborigin` 代码。一个包含
+`Wavelength + Signal + Baseline` 的 worksheet 只生成一个 Signal 样品，不会把 Baseline
+拆成样品。真实 `PL DATA.opju` 已与五份 DAT 做 `5 × 1,215` 点逐值对照，最大绝对误差为
+`1.78 × 10⁻¹⁵`；这些本地仪器文件未上传。
+
+Apache-2.0 的完整 `LICENSE`、`NOTICE`、固定上游版本、提交和本地修改说明保存在
+`core/importing/_origin_parser/`。PyInstaller 会将其嵌入 `licenses/quantized-origin`；
+正式构建还会公开生成独立的 `dist/THIRD-PARTY-NOTICES.txt`，并将该文件纳入
+`SHA256SUMS.txt`，使最终用户无需解包 EXE 即可阅读完整第三方声明。
+支持语义、限制、错误恢复和许可证发布门槛见
+[Origin OPJ/OPJU 原生导入](docs/origin_import.md)。
 
 ### 多材料 Raw Peak
 
@@ -59,7 +74,7 @@ BIC 是自动选择准则；面积、FWHM、R² 和调整 R² 是结果与质量
 - 每层保存 Material、Thickness (nm)、Composition、Doping Type 和
   Doping Concentration (cm⁻³)；物理量经过有限值和范围校验。
 - `.plproj` 使用版本化 UTF-8 JSON，内嵌原始波长/强度数组，因此重新打开工程不依赖原始
-  Excel/CSV 路径。
+  数据文件路径。
 - 工程恢复样品、来源信息、颜色/显隐、绘图状态、材料选择与编辑窗口、Raw Peak 结果、
   拟合设置与完整拟合结果、外延层、主题和 Raw Peak 参数。
 - 保存使用同目录临时文件、flush/fsync 和原子替换；加载失败不会替换当前工程。
@@ -106,9 +121,12 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 脚本会依次执行全部测试、Ruff、受控清理、两个隔离的 PyInstaller 构建和启动 smoke test，
 并输出：
 
-- `dist\PL-Analyzer-Pro-v1.1.1-Windows-x64-en-US.exe`（英文原版）
-- `dist\PL-Analyzer-Pro-v1.1.1-Windows-x64-zh-CN.exe`（简体中文版）
+- `dist\PL-Analyzer-Pro-v1.1.2-Windows-x64-en-US.exe`（英文原版）
+- `dist\PL-Analyzer-Pro-v1.1.2-Windows-x64-zh-CN.exe`（简体中文版）
+- `dist\THIRD-PARTY-NOTICES.txt`（可公开阅读的完整第三方声明）
 - `dist\SHA256SUMS.txt`
+
+`SHA256SUMS.txt` 覆盖两个 EXE 与 `THIRD-PARTY-NOTICES.txt`；它不包含自身哈希。
 
 ## 使用方式
 
@@ -142,7 +160,9 @@ v1.1 尚不包含：
 ## 项目文档
 
 - [架构与扩展边界](docs/architecture.md)
+- [Origin OPJ/OPJU 原生导入](docs/origin_import.md)
 - [材料搜索窗口与科学边界](docs/material_windows.md)
 - [开发与验证](docs/development.md)
 - [v1.1 发布验证记录](docs/release_v1.1.md)
 - [v1.1.1 双语言发布说明](docs/release_v1.1.1.md)
+- [v1.1.2 Origin 原生导入发布说明](docs/release_v1.1.2.md)

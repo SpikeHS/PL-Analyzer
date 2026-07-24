@@ -5,6 +5,10 @@ addopts = "-ra"
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+force-exclude = true
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.ruff.format]
+exclude = ["core/importing/_origin_parser/*.py"]

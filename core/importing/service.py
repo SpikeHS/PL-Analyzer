@@ -10,7 +10,7 @@ from core.errors import DataImportError
 from core.models import SourceInfo, SpectrumSeries
 
 from .column_detector import ColumnDetection, ColumnDetector, PreparedSpectrumColumns
-from .readers import ReaderRegistry, TabularSheet
+from .readers import ReaderRegistry, TabularSheet, TabularSheetError
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,6 +78,16 @@ class SpectrumImportService:
             sheet_errors: list[ImportIssue] = []
             for sheet in sheets:
                 source_label = _source_label(path, sheet.name)
+                if isinstance(sheet, TabularSheetError):
+                    sheet_errors.append(
+                        ImportIssue(
+                            source=source_label,
+                            code=sheet.error.code,
+                            message=str(sheet.error),
+                            detail=sheet.error.detail,
+                        )
+                    )
+                    continue
                 try:
                     detection = self._detector.detect(sheet.rows)
                     prepared = self._detector.prepare(sheet.rows, detection)
