@@ -9,6 +9,7 @@ pytest.importorskip("PySide6")
 pytest.importorskip("matplotlib")
 
 from analysis.raw_peak import RawPeakAnalyzer
+from core import __version__
 from core.configuration import ApplicationSettings, MaterialDatabase, application_root
 from core.importing.service import SpectrumImportService
 from core.models import SourceInfo, SpectrumSeries
@@ -32,7 +33,7 @@ def test_main_window_constructs_offscreen(qtbot: pytest.FixtureRequest) -> None:
     )
     qtbot.addWidget(window)
 
-    assert window.windowTitle() == "Untitled — PL Analyzer Pro v1.1"
+    assert window.windowTitle() == f"Untitled — PL Analyzer Pro v{__version__}"
 
 
 def test_fit_panel_settings_round_trip(qtbot: pytest.FixtureRequest) -> None:

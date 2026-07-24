@@ -1,4 +1,4 @@
-# PL Analyzer Pro v1.1 架构
+# PL Analyzer Pro v1.1.1 架构
 
 ## 1. 架构目标
 
@@ -6,10 +6,10 @@ v1.1 保持桌面 UI、领域状态、科学算法、文件适配器和持久化
 和 `.plproj` 时没有改变 Raw Peak 的科学语义，也没有让 Qt Widget 成为工程数据模型。
 
 ```text
-main.py（组合根）
+main.py / main_zh.py（语言入口与组合根）
 ├── ui（Qt View + presentation controller）
 │   ├── sample / peak / fit / layer panels
-│   ├── preferences / theme / log
+│   ├── preferences / theme / log / localization
 │   └── main_window（用例编排与统一错误边界）
 ├── core
 │   ├── importing（CSV / XLSX / XLSM / XLS adapters）
@@ -27,6 +27,7 @@ main.py（组合根）
 依赖原则：
 
 - `main.py` 只完成 `QApplication`、配置、服务和主窗口的组合。
+- `main.py` 与 `main_zh.py` 只选择默认显示语言；两者装配同一组领域服务和窗口类。
 - 导入器不依赖 Qt；科学算法不感知 Widget、Matplotlib 或文件对话框。
 - `core.models`、`core.workspace` 和 `core.project` 不依赖 PySide6、Matplotlib、openpyxl 或
   xlrd。
@@ -55,6 +56,7 @@ main.py（组合根）
 | `ui/peak_panel.py` | 多材料选择、项目内窗口编辑、候选标签表 |
 | `ui/fit_panel.py` | 拟合设置和只读结果表 |
 | `ui/layer_editor.py` | 外延层增删改、排序与输入校验 |
+| `ui/localization.py` | 支持语言、Qt/Application 翻译目录加载与失败边界 |
 | `ui/main_window.py` | 菜单、用例编排、脏状态、工程恢复与异常边界 |
 
 ## 3. 核心不变量
@@ -71,6 +73,7 @@ main.py（组合根）
 9. 层厚使用 `thickness_nm`，掺杂浓度使用 `doping_concentration_cm3`；持久化键明确写为
    `doping_concentration_cm^-3`。
 10. 工程只有在全部解析、schema 验证和领域校验成功后才替换当前 UI/工作区状态。
+11. 语言只影响显示文本；中英文 EXE 共用材料 ID、算法、导出契约和 `.plproj` schema。
 
 ## 4. 多材料 Raw Peak 边界
 

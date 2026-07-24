@@ -18,7 +18,7 @@ python -m venv .venv
 
 1. 先定义领域模型、单位化字段和错误协议，UI 只编排可测试服务。
 2. 新功能包含正常路径、边界输入、失败恢复和持久化往返测试。
-3. `pytest` 与 `ruff check` 通过。
+3. `pytest`、`ruff check` 与 `ruff format --check` 通过。
 4. Qt offscreen 构造测试通过。
 5. 在 Windows 上人工启动 `main.py`，检查导入、拖拽、分析、绘图、工程恢复、导出和错误后
    继续操作。
@@ -30,14 +30,42 @@ python -m venv .venv
 ```powershell
 .\.venv\Scripts\python.exe -m pytest
 .\.venv\Scripts\python.exe -m ruff check .
+.\.venv\Scripts\python.exe -m ruff format --check .
 
 $env:QT_QPA_PLATFORM = "offscreen"
 .\.venv\Scripts\python.exe -c "from main import main"
 
 .\.venv\Scripts\python.exe main.py
+.\.venv\Scripts\python.exe main_zh.py
 ```
 
 `python -c "from main import main"` 只检查导入，不替代 Qt 事件循环或人工桌面验收。
+
+## 界面本地化
+
+英文是源代码基准语言，简体中文由 Qt Linguist 目录
+`resources/i18n/pl_analyzer_zh_CN.ts` 提供。UI 通过 `self.tr()` 或
+`QCoreApplication.translate()` 获取显示文本；领域枚举值、材料 ID、错误码、JSON key、
+`.plproj` schema 和导出数据契约不得翻译。
+
+修改可见文本后应重新提取并编译目录：
+
+```powershell
+$sources = @("main.py", "main_zh.py")
+$sources += Get-ChildItem ui,plotting -Filter *.py -File -Recurse |
+  Sort-Object FullName |
+  ForEach-Object FullName
+.\.venv\Scripts\pyside6-lupdate.exe @sources `
+  -ts resources\i18n\pl_analyzer_zh_CN.ts
+.\.venv\Scripts\pyside6-lrelease.exe `
+  resources\i18n\pl_analyzer_zh_CN.ts `
+  -qm resources\i18n\pl_analyzer_zh_CN.qm
+```
+
+提交前必须确认 TS 中没有 `unfinished` 或空翻译，源文和译文的命名占位符集合一致，并运行
+`tests/test_localization.py`。`qtbase_zh_CN.qm` 用于 Qt 标准按钮；Matplotlib
+NavigationToolbar 的 Python 定义文本由 `SpectrumPlotWidget` 显式翻译。新增语言应增加独立
+目录和构建目标，不得复制算法、材料配置或整套 UI 源码。
 
 ## v1.1 验证矩阵
 
@@ -125,9 +153,9 @@ HTTP(S) 链接具有合法绝对 URI；如开发机安装了 markdownlint，可�
 
 ## PyInstaller 发布门槛
 
-`build_release.ps1` 与 `PLAnalyzerPro.spec` 提供可重复的一文件 Windows 构建。当前工作区的
-v1.1 EXE 已通过本机启动、资源加载和可视化布局复核，详情见
-[v1.1 发布验证记录](release_v1.1.md)。正式对外签发仍需：
+`build_release.ps1 -Language all` 与 `PLAnalyzerPro.spec` 提供可重复的英文/简体中文
+一文件 Windows 构建。两个目标使用隔离 workpath，并在生成后分别执行定时启动 smoke test；
+详情见 [v1.1.1 双语言发布说明](release_v1.1.1.md)。正式对外签发仍需：
 
 1. 最终产品图标、代码签名和可验证的发布证书链；
 2. 将 `config/materials.json`、`config/default_settings.json` 等运行资源正确打入包；
@@ -136,4 +164,5 @@ v1.1 EXE 已通过本机启动、资源加载和可视化布局复核，详情�
 5. 无开发环境时的错误日志、崩溃恢复和杀毒软件误报检查；
 6. 记录构建工具版本、产物哈希和签名状态。
 
-开发机 EXE 可作为 v1.1 可运行交付物，但不得把它描述为已签名或已完成跨机认证的正式安装包。
+开发机 EXE 可作为 v1.1.1 可运行交付物，但不得把它描述为已签名或已完成跨机认证的正式
+安装包。

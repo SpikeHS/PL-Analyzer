@@ -35,6 +35,7 @@ from analysis.fit_session import (
 )
 from analysis.fitting import FitConfig, SpectrumFitter
 from analysis.raw_peak import RawPeakAnalyzer, RawPeakConfig
+from core import __version__
 from core.configuration import AnalysisDefaults, MaterialDatabase
 from core.errors import ExportError, PLAnalyzerError
 from core.importing.service import SpectrumImportService
@@ -93,7 +94,7 @@ class MainWindow(QMainWindow):
         self._dirty = False
 
         self._theme = load_theme_preference()
-        self.setWindowTitle("PL Analyzer Pro — v1.1")
+        self.setWindowTitle(self.tr("PL Analyzer Pro — v{version}").format(version=__version__))
         self.resize(1440, 860)
         self.setMinimumSize(1050, 680)
         self.setAcceptDrops(True)
@@ -112,18 +113,18 @@ class MainWindow(QMainWindow):
         splitter.addWidget(self._sample_panel)
         splitter.addWidget(self._plot_widget)
         analysis_side_tabs = QTabWidget(self)
-        analysis_side_tabs.addTab(self._peak_panel, "Raw Peak")
-        analysis_side_tabs.addTab(self._fit_panel, "Fit")
+        analysis_side_tabs.addTab(self._peak_panel, self.tr("Raw Peak"))
+        analysis_side_tabs.addTab(self._fit_panel, self.tr("Fit"))
         analysis_side_tabs.setMinimumWidth(400)
         splitter.addWidget(analysis_side_tabs)
         splitter.setSizes([230, 790, 420])
         splitter.setStretchFactor(1, 1)
         central_tabs = QTabWidget(self)
-        central_tabs.addTab(splitter, "PL Analysis")
-        central_tabs.addTab(self._layer_editor, "Layer Editor")
+        central_tabs.addTab(splitter, self.tr("PL Analysis"))
+        central_tabs.addTab(self._layer_editor, self.tr("Layer Editor"))
         self.setCentralWidget(central_tabs)
 
-        log_dock = QDockWidget("Log", self)
+        log_dock = QDockWidget(self.tr("Log"), self)
         log_dock.setObjectName("operator_log_dock")
         log_dock.setAllowedAreas(
             Qt.DockWidgetArea.BottomDockWidgetArea | Qt.DockWidgetArea.TopDockWidgetArea
@@ -139,7 +140,10 @@ class MainWindow(QMainWindow):
         self._sample_panel.set_spectra(self._workspace.spectra)
         self._refresh_views()
         self._set_dirty(False)
-        self._log_panel.write("info", "PL Analyzer Pro v1.1 is ready.")
+        self._log_panel.write(
+            "info",
+            self.tr("PL Analyzer Pro v{version} is ready.").format(version=__version__),
+        )
 
     def import_files(self, paths: Iterable[Path]) -> None:
         """Import paths from dialog or drag/drop through one error boundary."""
@@ -156,8 +160,12 @@ class MainWindow(QMainWindow):
                 )
                 self._log_panel.write(
                     "info",
-                    f"Loaded {Path(spectrum.source.file_path).name}{source_sheet} "
-                    f"as {spectrum.name} ({spectrum.wavelength_nm.size} points).",
+                    self.tr("Loaded {filename}{sheet} as {name} ({points} points).").format(
+                        filename=Path(spectrum.source.file_path).name,
+                        sheet=source_sheet,
+                        name=spectrum.name,
+                        points=spectrum.wavelength_nm.size,
+                    ),
                 )
                 for diagnostic in spectrum.diagnostics:
                     self._log_panel.write("warning", f"{spectrum.name}: {diagnostic}")
@@ -173,7 +181,7 @@ class MainWindow(QMainWindow):
             if added:
                 self._set_dirty(True)
                 self.statusBar().showMessage(
-                    f"Imported {len(added)} spectrum/spectra.",
+                    self.tr("Imported {count} spectrum/spectra.").format(count=len(added)),
                     5000,
                 )
                 self._run_peak_search(show_summary=False)
@@ -182,24 +190,31 @@ class MainWindow(QMainWindow):
                     f"• {issue.source}: {issue.message}" for issue in report.issues[:6]
                 )
                 if len(report.issues) > 6:
-                    summaries += f"\n• …and {len(report.issues) - 6} more (see Log)."
+                    summaries += self.tr("\n• …and {count} more (see Log).").format(
+                        count=len(report.issues) - 6
+                    )
                 QMessageBox.warning(
                     self,
-                    "Some data could not be imported",
+                    self.tr("Some data could not be imported"),
                     summaries,
                 )
         except Exception as exc:
-            self._report_exception("Import failed", exc)
+            self._report_exception(self.tr("Import failed"), exc)
 
     def report_unhandled_exception(self, error: BaseException) -> None:
         """Report a final UI-safe summary for an uncaught Qt callback error."""
 
-        self._log_panel.write("error", f"Unhandled error: {error}")
+        self._log_panel.write(
+            "error",
+            self.tr("Unhandled error: {error}").format(error=error),
+        )
         QMessageBox.critical(
             self,
-            "Unexpected error",
-            "An unexpected error occurred. The application will remain open when possible. "
-            "See the Log and application log file for details.",
+            self.tr("Unexpected error"),
+            self.tr(
+                "An unexpected error occurred. The application will remain open when "
+                "possible. See the Log and application log file for details."
+            ),
         )
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:  # noqa: N802
@@ -229,46 +244,46 @@ class MainWindow(QMainWindow):
         event.accept()
 
     def _create_actions(self) -> None:
-        self._new_project_action = QAction("&New project", self)
+        self._new_project_action = QAction(self.tr("&New project"), self)
         self._new_project_action.setShortcut(QKeySequence.StandardKey.New)
         self._new_project_action.triggered.connect(self._new_project)
 
-        self._open_action = QAction("&Open data…", self)
+        self._open_action = QAction(self.tr("&Open data…"), self)
         self._open_action.setShortcut(QKeySequence.StandardKey.Open)
         self._open_action.triggered.connect(self._choose_files)
 
-        self._open_project_action = QAction("Open &project…", self)
+        self._open_project_action = QAction(self.tr("Open &project…"), self)
         self._open_project_action.setShortcut("Ctrl+Shift+O")
         self._open_project_action.triggered.connect(self._open_project)
-        self._save_project_action = QAction("&Save project", self)
+        self._save_project_action = QAction(self.tr("&Save project"), self)
         self._save_project_action.setShortcut(QKeySequence.StandardKey.Save)
         self._save_project_action.triggered.connect(self._save_project)
-        self._save_project_as_action = QAction("Save project &as…", self)
+        self._save_project_as_action = QAction(self.tr("Save project &as…"), self)
         self._save_project_as_action.setShortcut("Ctrl+Shift+S")
         self._save_project_as_action.triggered.connect(self._save_project_as)
 
-        self._export_plot_action = QAction("Export &plot…", self)
+        self._export_plot_action = QAction(self.tr("Export &plot…"), self)
         self._export_plot_action.triggered.connect(self._export_plot)
-        self._export_peaks_action = QAction("Export peak &table…", self)
+        self._export_peaks_action = QAction(self.tr("Export peak &table…"), self)
         self._export_peaks_action.triggered.connect(self._export_peak_table)
-        self._export_fits_action = QAction("Export &fit table…", self)
+        self._export_fits_action = QAction(self.tr("Export &fit table…"), self)
         self._export_fits_action.triggered.connect(self._export_fit_table)
 
-        self._exit_action = QAction("E&xit", self)
+        self._exit_action = QAction(self.tr("E&xit"), self)
         self._exit_action.setShortcut(QKeySequence.StandardKey.Quit)
         self._exit_action.triggered.connect(self.close)
 
-        self._peak_search_action = QAction("&Peak Search", self)
+        self._peak_search_action = QAction(self.tr("&Peak Search"), self)
         self._peak_search_action.setShortcut("Ctrl+P")
         self._peak_search_action.triggered.connect(lambda: self._run_peak_search(show_summary=True))
-        self._fit_action = QAction("&Fit selected windows", self)
+        self._fit_action = QAction(self.tr("&Fit selected windows"), self)
         self._fit_action.setShortcut("Ctrl+F")
         self._fit_action.triggered.connect(lambda: self._run_fit(show_summary=True))
 
         amplitude_group = QActionGroup(self)
         amplitude_group.setExclusive(True)
-        self._raw_action = QAction("&Raw", self, checkable=True)
-        self._normalize_action = QAction("&Normalize", self, checkable=True)
+        self._raw_action = QAction(self.tr("&Raw"), self, checkable=True)
+        self._normalize_action = QAction(self.tr("&Normalize"), self, checkable=True)
         amplitude_group.addAction(self._raw_action)
         amplitude_group.addAction(self._normalize_action)
         if self._workspace.plot_settings.amplitude_mode is AmplitudeMode.RAW:
@@ -280,14 +295,14 @@ class MainWindow(QMainWindow):
             lambda: self._set_amplitude_mode(AmplitudeMode.NORMALIZE)
         )
 
-        self._offset_action = QAction("&Offset", self, checkable=True)
+        self._offset_action = QAction(self.tr("&Offset"), self, checkable=True)
         self._offset_action.setChecked(self._workspace.plot_settings.offset_enabled)
         self._offset_action.toggled.connect(self._set_offset)
 
         scale_group = QActionGroup(self)
         scale_group.setExclusive(True)
-        self._linear_action = QAction("&Linear scale", self, checkable=True)
-        self._log_action = QAction("Lo&g scale", self, checkable=True)
+        self._linear_action = QAction(self.tr("&Linear scale"), self, checkable=True)
+        self._log_action = QAction(self.tr("Lo&g scale"), self, checkable=True)
         scale_group.addAction(self._linear_action)
         scale_group.addAction(self._log_action)
         if self._workspace.plot_settings.y_scale is AxisScale.LINEAR:
@@ -297,17 +312,17 @@ class MainWindow(QMainWindow):
         self._linear_action.triggered.connect(lambda: self._set_y_scale(AxisScale.LINEAR))
         self._log_action.triggered.connect(lambda: self._set_y_scale(AxisScale.LOG))
 
-        self._legend_action = QAction("&Legend", self, checkable=True)
+        self._legend_action = QAction(self.tr("&Legend"), self, checkable=True)
         self._legend_action.setChecked(self._workspace.plot_settings.legend_visible)
         self._legend_action.toggled.connect(self._set_legend)
-        self._grid_action = QAction("&Grid", self, checkable=True)
+        self._grid_action = QAction(self.tr("&Grid"), self, checkable=True)
         self._grid_action.setChecked(self._workspace.plot_settings.grid_visible)
         self._grid_action.toggled.connect(self._set_grid)
 
         theme_group = QActionGroup(self)
         theme_group.setExclusive(True)
-        self._light_theme_action = QAction("&Light", self, checkable=True)
-        self._dark_theme_action = QAction("&Dark", self, checkable=True)
+        self._light_theme_action = QAction(self.tr("&Light"), self, checkable=True)
+        self._dark_theme_action = QAction(self.tr("&Dark"), self, checkable=True)
         theme_group.addAction(self._light_theme_action)
         theme_group.addAction(self._dark_theme_action)
         self._light_theme_action.setChecked(self._theme is ThemeMode.LIGHT)
@@ -315,28 +330,28 @@ class MainWindow(QMainWindow):
         self._light_theme_action.triggered.connect(lambda: self._set_theme(ThemeMode.LIGHT))
         self._dark_theme_action.triggered.connect(lambda: self._set_theme(ThemeMode.DARK))
 
-        self._preferences_action = QAction("&Preferences…", self)
+        self._preferences_action = QAction(self.tr("&Preferences…"), self)
         self._preferences_action.triggered.connect(self._show_preferences)
 
-        self._about_action = QAction("&About", self)
+        self._about_action = QAction(self.tr("&About"), self)
         self._about_action.triggered.connect(self._show_about)
 
     def _create_menus(self, log_dock: QDockWidget) -> None:
-        file_menu = self.menuBar().addMenu("&File")
+        file_menu = self.menuBar().addMenu(self.tr("&File"))
         file_menu.addAction(self._new_project_action)
         file_menu.addAction(self._open_project_action)
         file_menu.addAction(self._save_project_action)
         file_menu.addAction(self._save_project_as_action)
         file_menu.addSeparator()
         file_menu.addAction(self._open_action)
-        export_menu = file_menu.addMenu("&Export")
+        export_menu = file_menu.addMenu(self.tr("&Export"))
         export_menu.addAction(self._export_plot_action)
         export_menu.addAction(self._export_peaks_action)
         export_menu.addAction(self._export_fits_action)
         file_menu.addSeparator()
         file_menu.addAction(self._exit_action)
 
-        analysis_menu = self.menuBar().addMenu("&Analysis")
+        analysis_menu = self.menuBar().addMenu(self.tr("&Analysis"))
         analysis_menu.addAction(self._peak_search_action)
         analysis_menu.addAction(self._fit_action)
         analysis_menu.addSeparator()
@@ -344,26 +359,26 @@ class MainWindow(QMainWindow):
         analysis_menu.addAction(self._normalize_action)
         analysis_menu.addAction(self._offset_action)
 
-        view_menu = self.menuBar().addMenu("&View")
+        view_menu = self.menuBar().addMenu(self.tr("&View"))
         view_menu.addAction(self._linear_action)
         view_menu.addAction(self._log_action)
         view_menu.addSeparator()
         view_menu.addAction(self._legend_action)
         view_menu.addAction(self._grid_action)
-        theme_menu = view_menu.addMenu("&Theme")
+        theme_menu = view_menu.addMenu(self.tr("&Theme"))
         theme_menu.addAction(self._light_theme_action)
         theme_menu.addAction(self._dark_theme_action)
         view_menu.addSeparator()
         view_menu.addAction(log_dock.toggleViewAction())
 
-        tools_menu = self.menuBar().addMenu("&Tools")
+        tools_menu = self.menuBar().addMenu(self.tr("&Tools"))
         tools_menu.addAction(self._preferences_action)
 
-        help_menu = self.menuBar().addMenu("&Help")
+        help_menu = self.menuBar().addMenu(self.tr("&Help"))
         help_menu.addAction(self._about_action)
 
     def _create_toolbar(self) -> None:
-        toolbar = QToolBar("Main", self)
+        toolbar = QToolBar(self.tr("Main"), self)
         toolbar.setObjectName("main_toolbar")
         toolbar.setMovable(False)
         toolbar.addAction(self._new_project_action)
@@ -387,9 +402,11 @@ class MainWindow(QMainWindow):
         self._peak_panel.invalid_window_selected.connect(
             lambda name: QMessageBox.information(
                 self,
-                "Define a material window",
-                f"{name} has no scientifically valid universal range. "
-                "Enter its minimum and maximum wavelength before selecting it.",
+                self.tr("Define a material window"),
+                self.tr(
+                    "{name} has no scientifically valid universal range. Enter its "
+                    "minimum and maximum wavelength before selecting it."
+                ).format(name=name),
             )
         )
         self._peak_panel.settings_changed.connect(lambda: self._set_dirty(True))
@@ -402,10 +419,12 @@ class MainWindow(QMainWindow):
     def _choose_files(self) -> None:
         filenames, _ = QFileDialog.getOpenFileNames(
             self,
-            "Open PL spectra",
+            self.tr("Open PL spectra"),
             "",
-            "PL data (*.csv *.xlsx *.xls *.xlsm);;CSV (*.csv);;"
-            "Excel (*.xlsx *.xls *.xlsm);;All files (*)",
+            self.tr(
+                "PL data (*.csv *.xlsx *.xls *.xlsm);;CSV (*.csv);;"
+                "Excel (*.xlsx *.xls *.xlsm);;All files (*)"
+            ),
         )
         self.import_files(Path(filename) for filename in filenames)
 
@@ -413,15 +432,19 @@ class MainWindow(QMainWindow):
         spectra = self._workspace.visible_spectra()
         if not spectra:
             if show_summary:
-                QMessageBox.information(self, "Peak Search", "No visible spectra to analyze.")
+                QMessageBox.information(
+                    self,
+                    self.tr("Peak Search"),
+                    self.tr("No visible spectra to analyze."),
+                )
             return
         windows = self._peak_panel.search_windows
         if not windows:
             if show_summary:
                 QMessageBox.information(
                     self,
-                    "Peak Search",
-                    "Select at least one material with a valid wavelength window.",
+                    self.tr("Peak Search"),
+                    self.tr("Select at least one material with a valid wavelength window."),
                 )
             return
 
@@ -460,16 +483,32 @@ class MainWindow(QMainWindow):
         )
         self._log_panel.write(
             "info",
-            f"Raw peak analysis completed: {peak_count} unique peak(s); windows: {range_summary}.",
+            self.tr(
+                "Raw peak analysis completed: {peak_count} unique peak(s); "
+                "windows: {range_summary}."
+            ).format(
+                peak_count=peak_count,
+                range_summary=range_summary,
+            ),
         )
         if show_summary:
-            message = (
-                f"Found {peak_count} unique raw peak(s) in {len(results)} sample(s) "
-                f"across {len(windows)} material window(s)."
+            message = self.tr(
+                "Found {peak_count} unique raw peak(s) in {sample_count} sample(s) "
+                "across {window_count} material window(s)."
+            ).format(
+                peak_count=peak_count,
+                sample_count=len(results),
+                window_count=len(windows),
             )
             if failures:
-                message += f"\n\n{len(failures)} sample(s) were skipped; see Log."
-            QMessageBox.information(self, "Peak Search complete", message)
+                message += self.tr("\n\n{count} sample(s) were skipped; see Log.").format(
+                    count=len(failures)
+                )
+            QMessageBox.information(
+                self,
+                self.tr("Peak Search complete"),
+                message,
+            )
 
     def _run_fit(self, *, show_summary: bool) -> None:
         """Fit every visible spectrum in every selected material window."""
@@ -479,8 +518,8 @@ class MainWindow(QMainWindow):
             if show_summary:
                 QMessageBox.information(
                     self,
-                    "Model Fit",
-                    "No visible spectra to fit.",
+                    self.tr("Model Fit"),
+                    self.tr("No visible spectra to fit."),
                 )
             return
         windows = self._peak_panel.search_windows
@@ -488,9 +527,11 @@ class MainWindow(QMainWindow):
             if show_summary:
                 QMessageBox.information(
                     self,
-                    "Model Fit",
-                    "Select at least one material with a valid wavelength window "
-                    "on the Raw Peak tab.",
+                    self.tr("Model Fit"),
+                    self.tr(
+                        "Select at least one material with a valid wavelength window "
+                        "on the Raw Peak tab."
+                    ),
                 )
             return
 
@@ -541,17 +582,31 @@ class MainWindow(QMainWindow):
         fitted_peak_count = len(self._fit_store.table_records())
         self._log_panel.write(
             "info",
-            f"Model fitting completed: {len(assignments)} successful window fit(s), "
-            f"{fitted_peak_count} fitted peak(s), {len(failures)} skipped.",
+            self.tr(
+                "Model fitting completed: {fit_count} successful window fit(s), "
+                "{peak_count} fitted peak(s), {skipped_count} skipped."
+            ).format(
+                fit_count=len(assignments),
+                peak_count=fitted_peak_count,
+                skipped_count=len(failures),
+            ),
         )
         if show_summary:
-            message = (
-                f"Completed {len(assignments)} material-window fit(s) with "
-                f"{fitted_peak_count} fitted peak(s)."
+            message = self.tr(
+                "Completed {fit_count} material-window fit(s) with {peak_count} fitted peak(s)."
+            ).format(
+                fit_count=len(assignments),
+                peak_count=fitted_peak_count,
             )
             if failures:
-                message += f"\n\n{len(failures)} window fit(s) were skipped; see Log."
-            QMessageBox.information(self, "Model Fit complete", message)
+                message += self.tr("\n\n{count} window fit(s) were skipped; see Log.").format(
+                    count=len(failures)
+                )
+            QMessageBox.information(
+                self,
+                self.tr("Model Fit complete"),
+                message,
+            )
 
     def _on_visibility_changed(self, spectrum_id: str, visible: bool) -> None:
         self._workspace.set_visibility(spectrum_id, visible)
@@ -565,7 +620,10 @@ class MainWindow(QMainWindow):
         self._set_dirty(True)
         self._sample_panel.set_spectra(self._workspace.spectra)
         self._refresh_views()
-        self._log_panel.write("info", f"Removed {len(identifiers)} sample(s).")
+        self._log_panel.write(
+            "info",
+            self.tr("Removed {count} sample(s).").format(count=len(identifiers)),
+        )
 
     def _refresh_views(self) -> None:
         self._plot_widget.render(
@@ -617,7 +675,10 @@ class MainWindow(QMainWindow):
         self._analysis_defaults = dialog.analysis_defaults()
         save_analysis_preferences(self._analysis_defaults)
         self._set_dirty(True)
-        self._log_panel.write("info", "Analysis preferences updated.")
+        self._log_panel.write(
+            "info",
+            self.tr("Analysis preferences updated."),
+        )
 
     def _on_layers_changed(self) -> None:
         self._project.layers = list(self._layer_editor.layers)
@@ -646,16 +707,16 @@ class MainWindow(QMainWindow):
         self._sample_panel.set_spectra(())
         self._refresh_views()
         self._set_dirty(False)
-        self._log_panel.write("info", "Created a new project.")
+        self._log_panel.write("info", self.tr("Created a new project."))
 
     def _open_project(self) -> None:
         if not self._confirm_discard_changes():
             return
         filename, _ = QFileDialog.getOpenFileName(
             self,
-            "Open PL Analyzer Pro project",
+            self.tr("Open PL Analyzer Pro project"),
             "",
-            "PL Analyzer Pro project (*.plproj)",
+            self.tr("PL Analyzer Pro project (*.plproj)"),
         )
         if not filename:
             return
@@ -663,9 +724,12 @@ class MainWindow(QMainWindow):
         try:
             loaded = self._project_persistence.load(path)
             self._apply_loaded_project(loaded, path)
-            self._log_panel.write("info", f"Project opened: {path}")
+            self._log_panel.write(
+                "info",
+                self.tr("Project opened: {path}").format(path=path),
+            )
         except Exception as exc:
-            self._report_exception("Open project failed", exc)
+            self._report_exception(self.tr("Open project failed"), exc)
 
     def _save_project(self) -> bool:
         if self._project_path is None:
@@ -675,9 +739,9 @@ class MainWindow(QMainWindow):
     def _save_project_as(self) -> bool:
         filename, _ = QFileDialog.getSaveFileName(
             self,
-            "Save PL Analyzer Pro project",
+            self.tr("Save PL Analyzer Pro project"),
             "untitled.plproj",
-            "PL Analyzer Pro project (*.plproj)",
+            self.tr("PL Analyzer Pro project (*.plproj)"),
         )
         if not filename:
             return False
@@ -692,11 +756,17 @@ class MainWindow(QMainWindow):
             self._project_persistence.save(self._project, path)
             self._project_path = path
             self._set_dirty(False)
-            self._log_panel.write("info", f"Project saved: {path}")
-            self.statusBar().showMessage(f"Saved {path.name}", 5000)
+            self._log_panel.write(
+                "info",
+                self.tr("Project saved: {path}").format(path=path),
+            )
+            self.statusBar().showMessage(
+                self.tr("Saved {filename}").format(filename=path.name),
+                5000,
+            )
             return True
         except Exception as exc:
-            self._report_exception("Save project failed", exc)
+            self._report_exception(self.tr("Save project failed"), exc)
             return False
 
     def _sync_project_state(self) -> None:
@@ -753,13 +823,17 @@ class MainWindow(QMainWindow):
                 self._fit_store.remove_spectra(orphan_spectrum_ids)
                 self._log_panel.write(
                     "warning",
-                    f"Ignored {len(orphan_spectrum_ids)} orphaned fit spectrum reference(s).",
+                    self.tr("Ignored {count} orphaned fit spectrum reference(s).").format(
+                        count=len(orphan_spectrum_ids)
+                    ),
                 )
         except PLAnalyzerError as exc:
             self._fit_store.clear()
             self._log_panel.write(
                 "warning",
-                f"[{exc.code}] Stored fit results were not restored: {exc}",
+                self.tr("[{code}] Stored fit results were not restored: {error}").format(
+                    code=exc.code, error=exc
+                ),
             )
         fit_settings = project.extensions.get("fit_ui_settings")
         if isinstance(fit_settings, Mapping):
@@ -799,7 +873,7 @@ class MainWindow(QMainWindow):
         except (KeyError, TypeError, ValueError):
             self._log_panel.write(
                 "warning",
-                "Stored Raw Peak preferences were invalid and were ignored.",
+                self.tr("Stored Raw Peak preferences were invalid and were ignored."),
             )
             return
         if (
@@ -811,7 +885,7 @@ class MainWindow(QMainWindow):
         ):
             self._log_panel.write(
                 "warning",
-                "Stored Raw Peak preferences were outside valid limits and were ignored.",
+                self.tr("Stored Raw Peak preferences were outside valid limits and were ignored."),
             )
             return
         self._analysis_defaults = candidate
@@ -831,8 +905,8 @@ class MainWindow(QMainWindow):
             return True
         answer = QMessageBox.question(
             self,
-            "Unsaved project changes",
-            "Save changes to the current project?",
+            self.tr("Unsaved project changes"),
+            self.tr("Save changes to the current project?"),
             QMessageBox.StandardButton.Save
             | QMessageBox.StandardButton.Discard
             | QMessageBox.StandardButton.Cancel,
@@ -846,23 +920,36 @@ class MainWindow(QMainWindow):
 
     def _set_dirty(self, dirty: bool) -> None:
         self._dirty = dirty
-        name = self._project_path.name if self._project_path else "Untitled"
+        name = self._project_path.name if self._project_path else self.tr("Untitled")
         marker = "*" if dirty else ""
-        self.setWindowTitle(f"{marker}{name} — PL Analyzer Pro v1.1")
+        self.setWindowTitle(
+            self.tr("{marker}{name} — PL Analyzer Pro v{version}").format(
+                marker=marker,
+                name=name,
+                version=__version__,
+            )
+        )
 
     def _copy_peak_table(self, text: str) -> None:
         if not self._workspace.peak_table_records():
-            QMessageBox.information(self, "Copy Peak Table", "There are no results to copy.")
+            QMessageBox.information(
+                self,
+                self.tr("Copy Peak Table"),
+                self.tr("There are no results to copy."),
+            )
             return
         QApplication.clipboard().setText(text)
-        self._log_panel.write("info", "Peak table copied to the clipboard.")
+        self._log_panel.write(
+            "info",
+            self.tr("Peak table copied to the clipboard."),
+        )
 
     def _export_peak_table(self) -> None:
         filename, selected_filter = QFileDialog.getSaveFileName(
             self,
-            "Export peak table",
+            self.tr("Export peak table"),
             "PL_peaks.xlsx",
-            "Excel workbook (*.xlsx);;CSV (*.csv)",
+            self.tr("Excel workbook (*.xlsx);;CSV (*.csv)"),
         )
         if not filename:
             return
@@ -871,28 +958,37 @@ class MainWindow(QMainWindow):
             path = path.with_suffix(".csv" if "CSV" in selected_filter else ".xlsx")
         try:
             self._exporter.export(self._workspace.peak_table_records(), path)
-            self._log_panel.write("info", f"Peak table exported: {path}")
-            self.statusBar().showMessage(f"Exported {path.name}", 5000)
+            self._log_panel.write(
+                "info",
+                self.tr("Peak table exported: {path}").format(path=path),
+            )
+            self.statusBar().showMessage(
+                self.tr("Exported {filename}").format(filename=path.name),
+                5000,
+            )
         except Exception as exc:
-            self._report_exception("Peak table export failed", exc)
+            self._report_exception(self.tr("Peak table export failed"), exc)
 
     def _copy_fit_table(self, text: str) -> None:
         if not self._fit_store.table_records():
             QMessageBox.information(
                 self,
-                "Copy Fit Table",
-                "There are no fit results to copy.",
+                self.tr("Copy Fit Table"),
+                self.tr("There are no fit results to copy."),
             )
             return
         QApplication.clipboard().setText(text)
-        self._log_panel.write("info", "Fit table copied to the clipboard.")
+        self._log_panel.write(
+            "info",
+            self.tr("Fit table copied to the clipboard."),
+        )
 
     def _export_fit_table(self) -> None:
         filename, selected_filter = QFileDialog.getSaveFileName(
             self,
-            "Export fit table",
+            self.tr("Export fit table"),
             "PL_fits.xlsx",
-            "Excel workbook (*.xlsx);;CSV (*.csv)",
+            self.tr("Excel workbook (*.xlsx);;CSV (*.csv)"),
         )
         if not filename:
             return
@@ -901,17 +997,23 @@ class MainWindow(QMainWindow):
             path = path.with_suffix(".csv" if "CSV" in selected_filter else ".xlsx")
         try:
             self._fit_exporter.export(self._fit_store.table_records(), path)
-            self._log_panel.write("info", f"Fit table exported: {path}")
-            self.statusBar().showMessage(f"Exported {path.name}", 5000)
+            self._log_panel.write(
+                "info",
+                self.tr("Fit table exported: {path}").format(path=path),
+            )
+            self.statusBar().showMessage(
+                self.tr("Exported {filename}").format(filename=path.name),
+                5000,
+            )
         except Exception as exc:
-            self._report_exception("Fit table export failed", exc)
+            self._report_exception(self.tr("Fit table export failed"), exc)
 
     def _export_plot(self) -> None:
         filename, selected_filter = QFileDialog.getSaveFileName(
             self,
-            "Export plot",
+            self.tr("Export plot"),
             "PL_comparison.png",
-            "PNG image (*.png);;SVG vector (*.svg);;PDF document (*.pdf)",
+            self.tr("PNG image (*.png);;SVG vector (*.svg);;PDF document (*.pdf)"),
         )
         if not filename:
             return
@@ -925,19 +1027,25 @@ class MainWindow(QMainWindow):
             path = path.with_suffix(suffix)
         if path.suffix.casefold() not in {".png", ".svg", ".pdf"}:
             self._report_exception(
-                "Plot export failed",
+                self.tr("Plot export failed"),
                 ExportError(
-                    f"Unsupported plot format: {path.suffix}",
+                    self.tr("Unsupported plot format: {suffix}").format(suffix=path.suffix),
                     code="E_EXPORT_FORMAT",
                 ),
             )
             return
         try:
             self._plot_widget.save_figure(path)
-            self._log_panel.write("info", f"Plot exported: {path}")
-            self.statusBar().showMessage(f"Exported {path.name}", 5000)
+            self._log_panel.write(
+                "info",
+                self.tr("Plot exported: {path}").format(path=path),
+            )
+            self.statusBar().showMessage(
+                self.tr("Exported {filename}").format(filename=path.name),
+                5000,
+            )
         except Exception as exc:
-            self._report_exception("Plot export failed", exc)
+            self._report_exception(self.tr("Plot export failed"), exc)
 
     def _report_exception(self, context: str, exc: BaseException) -> None:
         traceback_text = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
@@ -952,14 +1060,17 @@ class MainWindow(QMainWindow):
         self._log_panel.write("error", f"{context}{code}: {exc}")
         message = str(exc)
         if detail:
-            message += f"\n\nDetails: {detail}"
+            message += self.tr("\n\nDetails: {detail}").format(detail=detail)
         QMessageBox.critical(self, context, message)
 
     def _show_about(self) -> None:
         QMessageBox.about(
             self,
-            "About PL Analyzer Pro",
-            "<b>PL Analyzer Pro v1.1</b><br><br>"
-            "Desktop photoluminescence analysis for III–V semiconductor research.<br>"
-            "Includes material-labelled Raw Peak analysis and model-based spectral fitting.",
+            self.tr("About PL Analyzer Pro"),
+            self.tr(
+                "<b>PL Analyzer Pro v{version}</b><br><br>"
+                "Desktop photoluminescence analysis for III–V semiconductor research."
+                "<br>Includes material-labelled Raw Peak analysis and model-based "
+                "spectral fitting."
+            ).format(version=__version__),
         )

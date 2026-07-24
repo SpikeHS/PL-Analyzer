@@ -5,7 +5,13 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
+from PySide6.QtCore import (
+    QT_TRANSLATE_NOOP,
+    QAbstractTableModel,
+    QModelIndex,
+    Qt,
+    Signal,
+)
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
@@ -19,6 +25,7 @@ from PySide6.QtWidgets import (
 
 from core.configuration import MaterialDatabase, MaterialRecord
 from core.models import MaterialSearchWindow, PeakTableRecord
+from ui.qt_compat import normalize_check_state
 
 
 @dataclass(slots=True)
@@ -36,7 +43,11 @@ class MaterialWindowModel(QAbstractTableModel):
 
     invalid_window_selected = Signal(str)
     settings_changed = Signal()
-    _HEADERS = ("Material", "Min (nm)", "Max (nm)")
+    _HEADERS = (
+        QT_TRANSLATE_NOOP("MaterialWindowModel", "Material"),
+        QT_TRANSLATE_NOOP("MaterialWindowModel", "Min (nm)"),
+        QT_TRANSLATE_NOOP("MaterialWindowModel", "Max (nm)"),
+    )
 
     def __init__(self, database: MaterialDatabase, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -75,7 +86,7 @@ class MaterialWindowModel(QAbstractTableModel):
             and role == Qt.ItemDataRole.DisplayRole
             and 0 <= section < len(self._HEADERS)
         ):
-            return self._HEADERS[section]
+            return self.tr(self._HEADERS[section])
         return super().headerData(section, orientation, role)
 
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> object:
@@ -88,7 +99,11 @@ class MaterialWindowModel(QAbstractTableModel):
             if role == Qt.ItemDataRole.CheckStateRole:
                 return Qt.CheckState.Checked if state.selected else Qt.CheckState.Unchecked
             if role == Qt.ItemDataRole.ToolTipRole:
-                return state.material.notes or "Material search window"
+                return (
+                    self.tr(state.material.notes)
+                    if state.material.notes
+                    else self.tr("Material search window")
+                )
         elif index.column() in {1, 2}:
             value = state.min_nm if index.column() == 1 else state.max_nm
             if role == Qt.ItemDataRole.DisplayRole:
@@ -119,7 +134,10 @@ class MaterialWindowModel(QAbstractTableModel):
             return False
         state = self._states[index.row()]
         if index.column() == 0 and role == Qt.ItemDataRole.CheckStateRole:
-            selected = value == Qt.CheckState.Checked or value == int(Qt.CheckState.Checked)
+            check_state = normalize_check_state(value)
+            if check_state is None:
+                return False
+            selected = check_state == Qt.CheckState.Checked
             if selected and not _valid_window(state.min_nm, state.max_nm):
                 self.invalid_window_selected.emit(state.material.display_name)
                 return False
@@ -223,14 +241,14 @@ class PeakTableModel(QAbstractTableModel):
     """Read-only table model for de-duplicated, material-labelled raw peaks."""
 
     _HEADERS = (
-        "Sample",
-        "Material",
-        "Peak",
-        "Position\n(nm)",
-        "Height\n(a.u.)",
-        "FWHM\n(nm)",
-        "Prominence\n(a.u.)",
-        "Quality",
+        QT_TRANSLATE_NOOP("PeakTableModel", "Sample"),
+        QT_TRANSLATE_NOOP("PeakTableModel", "Material"),
+        QT_TRANSLATE_NOOP("PeakTableModel", "Peak"),
+        QT_TRANSLATE_NOOP("PeakTableModel", "Position\n(nm)"),
+        QT_TRANSLATE_NOOP("PeakTableModel", "Height\n(a.u.)"),
+        QT_TRANSLATE_NOOP("PeakTableModel", "FWHM\n(nm)"),
+        QT_TRANSLATE_NOOP("PeakTableModel", "Prominence\n(a.u.)"),
+        QT_TRANSLATE_NOOP("PeakTableModel", "Quality"),
     )
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -267,7 +285,7 @@ class PeakTableModel(QAbstractTableModel):
             and role == Qt.ItemDataRole.DisplayRole
             and 0 <= section < len(self._HEADERS)
         ):
-            return self._HEADERS[section]
+            return self.tr(self._HEADERS[section])
         return super().headerData(section, orientation, role)
 
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> object:
@@ -289,7 +307,7 @@ class PeakTableModel(QAbstractTableModel):
         if role == Qt.ItemDataRole.TextAlignmentRole and index.column() in {2, 3, 4, 5, 6}:
             return int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         if role == Qt.ItemDataRole.ToolTipRole and index.column() == 5:
-            return (
+            return self.tr(
                 "Raw half-prominence width in wavelength units. "
                 "No fit or baseline correction is applied."
             )
@@ -353,16 +371,16 @@ class PeakPanel(QWidget):
         material_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         material_table.setMaximumHeight(210)
 
-        select_all_button = QPushButton("Select all defined", self)
+        select_all_button = QPushButton(self.tr("Select all defined"), self)
         select_all_button.clicked.connect(lambda: self._material_model.set_all_with_windows(True))
-        clear_button = QPushButton("Clear", self)
+        clear_button = QPushButton(self.tr("Clear"), self)
         clear_button.clicked.connect(lambda: self._material_model.set_all_with_windows(False))
         material_buttons = QHBoxLayout()
         material_buttons.addWidget(select_all_button)
         material_buttons.addWidget(clear_button)
         material_buttons.addStretch(1)
 
-        search_button = QPushButton("Search selected material windows", self)
+        search_button = QPushButton(self.tr("Search selected material windows"), self)
         search_button.clicked.connect(self.search_requested)
 
         self._peak_model = PeakTableModel(self)
@@ -373,9 +391,9 @@ class PeakPanel(QWidget):
         self._peak_table.setAlternatingRowColors(True)
         self._peak_table.horizontalHeader().setStretchLastSection(True)
 
-        copy_button = QPushButton("Copy", self)
+        copy_button = QPushButton(self.tr("Copy"), self)
         copy_button.clicked.connect(self._copy)
-        export_button = QPushButton("Export…", self)
+        export_button = QPushButton(self.tr("Export…"), self)
         export_button.clicked.connect(self.export_requested)
         result_buttons = QHBoxLayout()
         result_buttons.addWidget(copy_button)
@@ -383,21 +401,23 @@ class PeakPanel(QWidget):
         result_buttons.addStretch(1)
 
         note = QLabel(
-            "Multiple material windows can be active together. Overlapping detections "
-            "are shown once while retaining every material label. Raw FWHM is measured "
-            "at half prominence without fitting or baseline correction.",
+            self.tr(
+                "Multiple material windows can be active together. Overlapping detections "
+                "are shown once while retaining every material label. Raw FWHM is measured "
+                "at half prominence without fitting or baseline correction."
+            ),
             self,
         )
         note.setWordWrap(True)
         note.setStyleSheet("color: #707070;")
 
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Material Peak Windows", self))
+        layout.addWidget(QLabel(self.tr("Material Peak Windows"), self))
         layout.addWidget(material_table)
         layout.addLayout(material_buttons)
         layout.addWidget(search_button)
         layout.addSpacing(8)
-        layout.addWidget(QLabel("Raw Peak Table", self))
+        layout.addWidget(QLabel(self.tr("Raw Peak Table"), self))
         layout.addWidget(self._peak_table, 1)
         layout.addLayout(result_buttons)
         layout.addWidget(note)

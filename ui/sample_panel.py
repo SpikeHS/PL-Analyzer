@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from core.models import SpectrumSeries
+from ui.qt_compat import normalize_check_state
 
 
 class SampleListModel(QAbstractListModel):
@@ -49,12 +50,14 @@ class SampleListModel(QAbstractListModel):
         if role == Qt.ItemDataRole.DecorationRole:
             return QColor(spectrum.display.color)
         if role == Qt.ItemDataRole.ToolTipRole:
-            sheet = spectrum.source.sheet_name or "CSV"
-            return (
-                f"{spectrum.source.file_path}\n"
-                f"Sheet: {sheet}\n"
-                f"Columns: {spectrum.source.wavelength_column} / "
-                f"{spectrum.source.intensity_column}"
+            sheet = spectrum.source.sheet_name or self.tr("CSV")
+            return self.tr(
+                "{file_path}\nSheet: {sheet}\nColumns: {wavelength_column} / {intensity_column}"
+            ).format(
+                file_path=spectrum.source.file_path,
+                sheet=sheet,
+                wavelength_column=spectrum.source.wavelength_column,
+                intensity_column=spectrum.source.intensity_column,
             )
         if role == self.spectrum_id_role:
             return spectrum.spectrum_id
@@ -82,7 +85,10 @@ class SampleListModel(QAbstractListModel):
         ):
             return False
         spectrum = self._spectra[index.row()]
-        visible = value == Qt.CheckState.Checked or value == int(Qt.CheckState.Checked)
+        check_state = normalize_check_state(value)
+        if check_state is None:
+            return False
+        visible = check_state == Qt.CheckState.Checked
         if spectrum.display.visible == visible:
             return False
         spectrum.display.visible = visible
@@ -105,11 +111,14 @@ class SamplePanel(QWidget):
         self._view.setModel(self._model)
         self._view.setSelectionMode(QListView.SelectionMode.ExtendedSelection)
 
-        import_hint = QLabel("Drop CSV/XLSX/XLS files here or use File → Open.", self)
+        import_hint = QLabel(
+            self.tr("Drop CSV/XLSX/XLS files here or use File → Open."),
+            self,
+        )
         import_hint.setWordWrap(True)
         import_hint.setStyleSheet("color: #707070;")
 
-        remove_button = QPushButton("Remove selected", self)
+        remove_button = QPushButton(self.tr("Remove selected"), self)
         remove_button.clicked.connect(self._request_removal)
 
         button_row = QHBoxLayout()
@@ -117,7 +126,7 @@ class SamplePanel(QWidget):
         button_row.addWidget(remove_button)
 
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Samples", self))
+        layout.addWidget(QLabel(self.tr("Samples"), self))
         layout.addWidget(self._view, 1)
         layout.addWidget(import_hint)
         layout.addLayout(button_row)
