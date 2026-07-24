@@ -33,6 +33,17 @@ for directory_name in data_directories:
         raise FileNotFoundError(f"Required release directory is missing: {source_directory}")
     datas.append((str(source_directory), directory_name))
 
+origin_parser_directory = project_root / "core" / "importing" / "_origin_parser"
+for third_party_file_name in ("LICENSE", "NOTICE", "UPSTREAM.md"):
+    third_party_file = origin_parser_directory / third_party_file_name
+    if not third_party_file.is_file():
+        raise FileNotFoundError(
+            f"Required Origin reader attribution is missing: {third_party_file}"
+        )
+    datas.append(
+        (str(third_party_file), "licenses/quantized-origin")
+    )
+
 version_file = project_root / "resources" / version_file_name
 if not version_file.is_file():
     raise FileNotFoundError(f"Windows version resource is missing: {version_file}")

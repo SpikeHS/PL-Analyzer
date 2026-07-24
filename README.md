@@ -16,13 +16,24 @@ PL Analyzer Pro 是面向 MBE 与 III–V 族半导体研究的光致发光（PL
 
 ### 数据导入与多样品绘图
 
-- 拖拽或文件选择批量导入 CSV、XLSX、XLSM 和旧版 XLS。
-- Excel 中每个可识别 Sheet 独立导入为一个样品；坏文件或坏 Sheet 不会丢失同批成功结果。
+- 拖拽或文件选择批量导入 Origin OPJ/OPJU、CSV、XLSX、XLSM 和旧版 XLS。
+- Origin 与 Excel 中每个可识别 worksheet/Sheet 独立导入；坏文件或坏 Sheet 不会丢失同批
+  成功结果。
 - 根据中英文表头和数值结构自动识别波长列与强度列，无需指定列号。
 - 左侧样品勾选、自动颜色、多样品同轴叠加，以及 Matplotlib 缩放、平移工具栏。
 - Raw、Normalize、Offset、Linear、Log、Legend 和 Grid；显示变换不会覆盖原始数组。
 
 `.xlsx/.xlsm` 由 `openpyxl` 读取；旧二进制 `.xls` 由隔离的 `xlrd` 适配器读取。
+OPJ/OPJU 由固定在 `quantized-lab` v0.11.0、提交
+`c34980b82947af3f82f7a9a4ff5692610ba5398f` 的内置 Apache-2.0 clean-room worksheet
+解析器读取，不需要安装或启动 Origin/COM。一个包含 `Wavelength + Signal + Baseline` 的
+worksheet 只生成一个 Signal 样品，不会把 Baseline 拆成样品。真实 `PL DATA.opju` 已与五份
+DAT 做 `5 × 1,215` 点逐值对照，最大绝对误差为 `1.78 × 10⁻¹⁵`；这些本地仪器文件未上传。
+Apache-2.0 声明保存在 `core/importing/_origin_parser/LICENSE` 与
+`core/importing/_origin_parser/NOTICE`；PyInstaller 构建会把它们收集到
+`licenses/quantized-origin`。
+支持语义、限制、错误恢复和许可证发布门槛见
+[Origin OPJ/OPJU 原生导入](docs/origin_import.md)。
 
 ### 多材料 Raw Peak
 
@@ -142,6 +153,7 @@ v1.1 尚不包含：
 ## 项目文档
 
 - [架构与扩展边界](docs/architecture.md)
+- [Origin OPJ/OPJU 原生导入](docs/origin_import.md)
 - [材料搜索窗口与科学边界](docs/material_windows.md)
 - [开发与验证](docs/development.md)
 - [v1.1 发布验证记录](docs/release_v1.1.md)

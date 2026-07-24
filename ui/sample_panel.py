@@ -112,7 +112,7 @@ class SamplePanel(QWidget):
         self._view.setSelectionMode(QListView.SelectionMode.ExtendedSelection)
 
         import_hint = QLabel(
-            self.tr("Drop CSV/XLSX/XLS files here or use File → Open."),
+            self.tr("Drop OPJ/OPJU/CSV/XLSX/XLS files here or use File → Open."),
             self,
         )
         import_hint.setWordWrap(True)

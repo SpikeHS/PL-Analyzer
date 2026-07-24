@@ -422,7 +422,8 @@ class MainWindow(QMainWindow):
             self.tr("Open PL spectra"),
             "",
             self.tr(
-                "PL data (*.csv *.xlsx *.xls *.xlsm);;CSV (*.csv);;"
+                "PL data (*.opj *.opju *.csv *.xlsx *.xls *.xlsm);;"
+                "Origin Project (*.opj *.opju);;CSV (*.csv);;"
                 "Excel (*.xlsx *.xls *.xlsm);;All files (*)"
             ),
         )
@@ -1072,5 +1073,7 @@ class MainWindow(QMainWindow):
                 "Desktop photoluminescence analysis for III–V semiconductor research."
                 "<br>Includes material-labelled Raw Peak analysis and model-based "
                 "spectral fitting."
+                "<br><br>Native OPJ/OPJU import includes the Apache-2.0 licensed "
+                "quantized Origin worksheet reader."
             ).format(version=__version__),
         )

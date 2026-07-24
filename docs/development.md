@@ -73,6 +73,7 @@ NavigationToolbar 的 Python 定义文本由 `SpectrumPlotWidget` 显式翻译�
 | --- | --- |
 | Column detector | 中英文表头、无表头数值回退、排序、重复波长合并 |
 | Import service | GB18030 CSV、多 Sheet XLSX、XLS 适配器、局部失败 |
+| Origin import | CPYA/CPYUA 签名、多 workbook/worksheet、Signal+Baseline、损坏文件恢复 |
 | Raw Peak | 精确峰、非等间隔 FWHM、平台峰、缺失值、边界峰、物理 nm 间距 |
 | Material configuration | schema v2、默认/扩展窗口、空窗口结构条目 |
 | Workspace/export | 唯一样品名/颜色、材料标签聚合、XLSX 结果往返 |
@@ -90,7 +91,42 @@ NavigationToolbar 的 Python 定义文本由 `SpectrumPlotWidget` 显式翻译�
 - Layer Editor 的增删改、顺序、厚度和掺杂浓度校验；
 - 保存后关闭并重新打开 `.plproj`，核对数组、样品状态、窗口、层、Raw Peak、拟合、主题和
   Preferences；
+- 同一 OPJ/OPJU 的多个 worksheet 均可导入，Signal+Baseline 表只增加一个样品，错误
+  worksheet 不影响同批其他数据；
 - PNG/SVG/PDF、Raw Peak XLSX/CSV、Fit XLSX/CSV 均可由目标应用重新打开。
+
+## Origin 导入维护与验证
+
+Origin worksheet 解析器固定为 Apache-2.0 `quantized-lab` v0.11.0、提交
+`c34980b82947af3f82f7a9a4ff5692610ba5398f`。来源文件清单、允许的本地修改和升级步骤见
+`core/importing/_origin_parser/UPSTREAM.md`；升级时必须同时保留并复核同目录的
+`LICENSE`、`NOTICE`。不得改用未固定的上游分支，也不得引入要求 Origin/COM 或 GPL
+liborigin 的隐式运行路径。
+
+真实数值回归基线是一份本地 `PL DATA.opju` 及其五份 DAT：共恢复 `5 × 1,215` 个
+Wavelength/Signal 点，逐值最大绝对误差 `1.78 × 10⁻¹⁵`，并确认每张
+`Wavelength + Signal + Baseline` 表只生成一个样品。这些仪器文件不进入仓库。当前仓库的
+旧 OPJ 回归样本由测试代码合成为最小 CPYA 容器，只验证解码和错误边界；若未来加入公开旧
+OPJ fixture，也只能用于容器兼容验证，不能作为 PL 科学验收样本。
+
+修改 Origin 导入层时至少运行：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\test_origin_import.py `
+  tests\test_import_service.py tests\test_column_detector.py
+.\.venv\Scripts\python.exe -m ruff check core\importing tests\test_origin_import.py
+.\.venv\Scripts\python.exe -m ruff format --check `
+  core\importing\origin_backend.py core\importing\origin_reader.py `
+  core\importing\readers.py core\importing\service.py tests\test_origin_import.py
+```
+
+必须覆盖 `.opj → CPYA `、`.opju → CPYUA `、错误签名、解析失败、多 worksheet、X 轴未恢复、
+Signal+Baseline 不拆样品，以及坏 Origin 文件不终止同批 CSV/XLSX。详细数据契约和限制见
+[Origin OPJ/OPJU 原生导入](origin_import.md)。
+
+`core/importing/_origin_parser/` 是带逐文件修改声明的固定上游副本。该目录执行 Ruff lint，
+但不对其运行自动 formatter，以免制造与上游无关的差异；格式调整只能随经过审查的上游升级
+进入，并同步更新 `UPSTREAM.md`。
 
 ## 科学算法变更规则
 
@@ -158,11 +194,16 @@ HTTP(S) 链接具有合法绝对 URI；如开发机安装了 markdownlint，可�
 详情见 [v1.1.1 双语言发布说明](release_v1.1.1.md)。正式对外签发仍需：
 
 1. 最终产品图标、代码签名和可验证的发布证书链；
-2. 将 `config/materials.json`、`config/default_settings.json` 等运行资源正确打入包；
+2. 将 `config/materials.json`、`config/default_settings.json`、内置 Origin 解析模块及源码
+   内 `core/importing/_origin_parser/LICENSE`、`core/importing/_origin_parser/NOTICE`
+   正确打入包；当前 PyInstaller 目标路径是 `licenses/quantized-origin`，并须保证第三方声明
+   可由最终用户访问；
 3. 干净 Windows 10/11 环境启动；
-4. CSV/XLSX/XLS 导入、Raw Peak、四模型拟合、`.plproj` 往返和全部导出格式验收；
-5. 无开发环境时的错误日志、崩溃恢复和杀毒软件误报检查；
-6. 记录构建工具版本、产物哈希和签名状态。
+4. 在没有 Python、Origin 和 Origin COM 注册的环境中，使用英文/中文 EXE 分别导入 OPJ
+   与 OPJU，并复核多 worksheet 和 Signal+Baseline 语义；
+5. CSV/XLSX/XLS 导入、Raw Peak、四模型拟合、`.plproj` 往返和全部导出格式验收；
+6. 无开发环境时的错误日志、崩溃恢复和杀毒软件误报检查；
+7. 记录构建工具版本、产物哈希、解析器固定提交、第三方许可证清单和签名状态。
 
 开发机 EXE 可作为 v1.1.1 可运行交付物，但不得把它描述为已签名或已完成跨机认证的正式
 安装包。
