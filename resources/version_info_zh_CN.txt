@@ -13,18 +13,18 @@ VSVersionInfo(
         StringFileInfo(
             [
                 StringTable(
-                    "040904B0",
+                    "080404B0",
                     [
                         StringStruct("CompanyName", "PL Analyzer Pro"),
                         StringStruct(
                             "FileDescription",
-                            "Photoluminescence spectrum analysis software",
+                            "光致发光光谱分析软件",
                         ),
                         StringStruct("FileVersion", "1.1.1"),
-                        StringStruct("InternalName", "PL Analyzer Pro"),
+                        StringStruct("InternalName", "PL Analyzer Pro 中文版"),
                         StringStruct(
                             "OriginalFilename",
-                            "PL-Analyzer-Pro-v1.1.1-Windows-x64-en-US.exe",
+                            "PL-Analyzer-Pro-v1.1.1-Windows-x64-zh-CN.exe",
                         ),
                         StringStruct("ProductName", "PL Analyzer Pro"),
                         StringStruct("ProductVersion", "1.1.1"),
@@ -32,6 +32,6 @@ VSVersionInfo(
                 )
             ]
         ),
-        VarFileInfo([VarStruct("Translation", [1033, 1200])]),
+        VarFileInfo([VarStruct("Translation", [2052, 1200])]),
     ],
 )

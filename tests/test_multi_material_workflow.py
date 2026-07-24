@@ -65,6 +65,27 @@ def test_multiple_material_windows_can_be_selected_together(
     ]
 
 
+def test_material_window_accepts_qt_unchecked_enum(qapp: object) -> None:
+    """Unchecking a selected material must accept PySide6's CheckState enum."""
+
+    database = MaterialDatabase.from_json(application_root() / "config" / "materials.json")
+    model = MaterialWindowModel(database)
+    gaas_row = next(
+        index
+        for index, material in enumerate(database.materials)
+        if material.material_id == "gaas_300k"
+    )
+
+    changed = model.setData(
+        model.index(gaas_row, 0),
+        Qt.CheckState.Unchecked,
+        Qt.ItemDataRole.CheckStateRole,
+    )
+
+    assert changed is True
+    assert "gaas_300k" not in {window.material_id for window in model.selected_windows()}
+
+
 def test_v1_custom_material_windows_restore_into_current_ui_rows(
     qapp: object,
     tmp_path: Path,

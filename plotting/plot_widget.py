@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg, NavigationToolbar2QT
 from matplotlib.figure import Figure
+from PySide6.QtCore import QT_TRANSLATE_NOOP
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from analysis.fit_session import MaterialFitAnalysis
@@ -23,11 +24,43 @@ from core.models import (
 class SpectrumPlotWidget(QWidget):
     """Render visible spectra without modifying their raw arrays."""
 
+    _PLOT_FONT_FAMILY = ("Microsoft YaHei UI", "DejaVu Sans")
+    _TOOLBAR_LABELS = (
+        QT_TRANSLATE_NOOP("SpectrumPlotWidget", "Home"),
+        QT_TRANSLATE_NOOP("SpectrumPlotWidget", "Back"),
+        QT_TRANSLATE_NOOP("SpectrumPlotWidget", "Forward"),
+        QT_TRANSLATE_NOOP("SpectrumPlotWidget", "Pan"),
+        QT_TRANSLATE_NOOP("SpectrumPlotWidget", "Zoom"),
+        QT_TRANSLATE_NOOP("SpectrumPlotWidget", "Subplots"),
+        QT_TRANSLATE_NOOP("SpectrumPlotWidget", "Customize"),
+        QT_TRANSLATE_NOOP("SpectrumPlotWidget", "Save"),
+    )
+    _TOOLBAR_TOOLTIPS = (
+        QT_TRANSLATE_NOOP("SpectrumPlotWidget", "Reset original view"),
+        QT_TRANSLATE_NOOP("SpectrumPlotWidget", "Back to previous view"),
+        QT_TRANSLATE_NOOP("SpectrumPlotWidget", "Forward to next view"),
+        QT_TRANSLATE_NOOP(
+            "SpectrumPlotWidget",
+            "Left button pans, Right button zooms\nx/y fixes axis, CTRL fixes aspect",
+        ),
+        QT_TRANSLATE_NOOP(
+            "SpectrumPlotWidget",
+            "Zoom to rectangle\nx/y fixes axis",
+        ),
+        QT_TRANSLATE_NOOP("SpectrumPlotWidget", "Configure subplots"),
+        QT_TRANSLATE_NOOP(
+            "SpectrumPlotWidget",
+            "Edit axis, curve and image parameters",
+        ),
+        QT_TRANSLATE_NOOP("SpectrumPlotWidget", "Save the figure"),
+    )
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._figure = Figure(layout="constrained")
         self._canvas = FigureCanvasQTAgg(self._figure)
         self._toolbar = NavigationToolbar2QT(self._canvas, self)
+        self._translate_toolbar()
         self._axes = self._figure.add_subplot(111)
         self._dark_mode = False
 
@@ -36,6 +69,19 @@ class SpectrumPlotWidget(QWidget):
         layout.addWidget(self._toolbar)
         layout.addWidget(self._canvas, 1)
         self.render((), {}, PlotDisplaySettings())
+
+    def _translate_toolbar(self) -> None:
+        """Translate Matplotlib's Python-defined Qt action labels and tooltips."""
+
+        labels = set(self._TOOLBAR_LABELS)
+        tooltips = set(self._TOOLBAR_TOOLTIPS)
+        for action in self._toolbar.actions():
+            if action.text() in labels:
+                action.setText(self.tr(action.text()))
+            if action.toolTip() in tooltips:
+                translated_tooltip = self.tr(action.toolTip())
+                action.setToolTip(translated_tooltip)
+                action.setStatusTip(translated_tooltip)
 
     @property
     def figure(self) -> Figure:
@@ -59,14 +105,21 @@ class SpectrumPlotWidget(QWidget):
             self._axes.text(
                 0.5,
                 0.5,
-                "Import PL data to begin",
+                self.tr("Import PL data to begin"),
                 transform=self._axes.transAxes,
                 ha="center",
                 va="center",
                 color="#777777",
+                fontfamily=self._PLOT_FONT_FAMILY,
             )
-            self._axes.set_xlabel("Wavelength (nm)")
-            self._axes.set_ylabel("Intensity (a.u.)")
+            self._axes.set_xlabel(
+                self.tr("Wavelength (nm)"),
+                fontfamily=self._PLOT_FONT_FAMILY,
+            )
+            self._axes.set_ylabel(
+                self.tr("Intensity (a.u.)"),
+                fontfamily=self._PLOT_FONT_FAMILY,
+            )
             self._axes.grid(settings.grid_visible, alpha=0.25)
             self._canvas.draw_idle()
             return
@@ -109,9 +162,10 @@ class SpectrumPlotWidget(QWidget):
                     linestyle="--",
                     linewidth=1.2,
                     alpha=0.9,
-                    label=(
-                        f"{spectrum.name} — {assignment.window.material_name} "
-                        f"{assignment.result.model.value} fit"
+                    label=self.tr("{sample_name} — {material_name} {model_name} fit").format(
+                        sample_name=spectrum.name,
+                        material_name=assignment.window.material_name,
+                        model_name=assignment.result.model.value,
                     ),
                 )
             result = peak_results.get(spectrum.spectrum_id)
@@ -137,14 +191,20 @@ class SpectrumPlotWidget(QWidget):
                     zorder=4,
                 )
 
-        self._axes.set_xlabel("Wavelength (nm)")
+        self._axes.set_xlabel(
+            self.tr("Wavelength (nm)"),
+            fontfamily=self._PLOT_FONT_FAMILY,
+        )
         if settings.amplitude_mode is AmplitudeMode.NORMALIZE:
-            ylabel = "Normalized intensity"
+            ylabel = self.tr("Normalized intensity")
         else:
-            ylabel = "Intensity (a.u.)"
+            ylabel = self.tr("Intensity (a.u.)")
         if settings.offset_enabled:
-            ylabel += " + offset"
-        self._axes.set_ylabel(ylabel)
+            ylabel += self.tr(" + offset")
+        self._axes.set_ylabel(
+            ylabel,
+            fontfamily=self._PLOT_FONT_FAMILY,
+        )
         self._axes.set_yscale(settings.y_scale.value)
         self._axes.grid(settings.grid_visible, alpha=0.25)
         if settings.legend_visible:
@@ -152,6 +212,7 @@ class SpectrumPlotWidget(QWidget):
             legend_color = "#e8e8e8" if self._dark_mode else "#202020"
             for text in legend.get_texts():
                 text.set_color(legend_color)
+                text.set_fontfamily(self._PLOT_FONT_FAMILY)
         self._canvas.draw_idle()
 
     def save_figure(self, path: Path) -> None:

@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
+from PySide6.QtCore import (
+    QT_TRANSLATE_NOOP,
+    QAbstractTableModel,
+    QModelIndex,
+    Qt,
+    Signal,
+)
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -28,12 +34,12 @@ class LayerTableModel(QAbstractTableModel):
     """Read-only table adapter; edits are validated through ``LayerDialog``."""
 
     _HEADERS = (
-        "Layer",
-        "Material",
-        "Thickness (nm)",
-        "Composition",
-        "Doping Type",
-        "Doping Concentration (cm⁻³)",
+        QT_TRANSLATE_NOOP("LayerTableModel", "Layer"),
+        QT_TRANSLATE_NOOP("LayerTableModel", "Material"),
+        QT_TRANSLATE_NOOP("LayerTableModel", "Thickness (nm)"),
+        QT_TRANSLATE_NOOP("LayerTableModel", "Composition"),
+        QT_TRANSLATE_NOOP("LayerTableModel", "Doping Type"),
+        QT_TRANSLATE_NOOP("LayerTableModel", "Doping Concentration (cm⁻³)"),
     )
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -124,7 +130,7 @@ class LayerTableModel(QAbstractTableModel):
             and role == Qt.ItemDataRole.DisplayRole
             and 0 <= section < len(self._HEADERS)
         ):
-            return self._HEADERS[section]
+            return self.tr(self._HEADERS[section])
         return super().headerData(section, orientation, role)
 
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> object:
@@ -137,7 +143,7 @@ class LayerTableModel(QAbstractTableModel):
             else f"{layer.doping_concentration_cm3:.4g}"
         )
         values: tuple[object, ...] = (
-            f"Layer {index.row() + 1}",
+            self.tr("Layer {number}").format(number=index.row() + 1),
             layer.material,
             f"{layer.thickness_nm:.6g}",
             layer.composition or "—",
@@ -167,15 +173,15 @@ class LayerEditorWidget(QWidget):
         self._table.horizontalHeader().setStretchLastSection(True)
         self._table.doubleClicked.connect(self._edit_selected)
 
-        add_button = QPushButton("Add layer…", self)
+        add_button = QPushButton(self.tr("Add layer…"), self)
         add_button.clicked.connect(self._add_layer)
-        edit_button = QPushButton("Edit…", self)
+        edit_button = QPushButton(self.tr("Edit…"), self)
         edit_button.clicked.connect(self._edit_selected)
-        remove_button = QPushButton("Remove", self)
+        remove_button = QPushButton(self.tr("Remove"), self)
         remove_button.clicked.connect(self._remove_selected)
-        up_button = QPushButton("Move up", self)
+        up_button = QPushButton(self.tr("Move up"), self)
         up_button.clicked.connect(lambda: self._move_selected(-1))
-        down_button = QPushButton("Move down", self)
+        down_button = QPushButton(self.tr("Move down"), self)
         down_button.clicked.connect(lambda: self._move_selected(1))
 
         buttons = QHBoxLayout()
@@ -187,11 +193,13 @@ class LayerEditorWidget(QWidget):
         buttons.addWidget(down_button)
         buttons.addStretch(1)
 
-        heading = QLabel("Epitaxial Layer Editor", self)
+        heading = QLabel(self.tr("Epitaxial Layer Editor"), self)
         heading.setStyleSheet("font-size: 16px; font-weight: 600;")
         description = QLabel(
-            "Order is substrate side → surface side. Double-click a row to edit. "
-            "The stack has no software layer-count limit.",
+            self.tr(
+                "Order is substrate side → surface side. Double-click a row to edit. "
+                "The stack has no software layer-count limit."
+            ),
             self,
         )
         description.setWordWrap(True)
@@ -247,8 +255,11 @@ class LayerEditorWidget(QWidget):
         layer = self._model.layers[row]
         answer = QMessageBox.question(
             self,
-            "Remove layer",
-            f"Remove Layer {row + 1} ({layer.material})?",
+            self.tr("Remove layer"),
+            self.tr("Remove Layer {number} ({material})?").format(
+                number=row + 1,
+                material=layer.material,
+            ),
         )
         if answer != QMessageBox.StandardButton.Yes:
             return
@@ -275,7 +286,9 @@ class LayerDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self._source_layer = layer
-        self.setWindowTitle("Edit epitaxial layer" if layer else "Add epitaxial layer")
+        self.setWindowTitle(
+            self.tr("Edit epitaxial layer") if layer else self.tr("Add epitaxial layer")
+        )
 
         self._material = QLineEdit(layer.material if layer else "GaAs", self)
         self._thickness = QDoubleSpinBox(self)
@@ -284,22 +297,22 @@ class LayerDialog(QDialog):
         self._thickness.setValue(layer.thickness_nm if layer else 1.0)
         self._thickness.setSuffix(" nm")
         self._composition = QLineEdit(layer.composition if layer else "", self)
-        self._composition.setPlaceholderText("e.g. Al=0.40 or —")
+        self._composition.setPlaceholderText(self.tr("e.g. Al=0.40 or —"))
         self._doping_type = QComboBox(self)
         self._doping_type.setEditable(True)
         self._doping_type.addItems(["", "Si", "Be", "C", "Zn", "Te", "Sn"])
         self._doping_type.setCurrentText(layer.doping_type if layer else "")
         self._concentration = QLineEdit(self)
-        self._concentration.setPlaceholderText("e.g. 1.3E17; blank for undoped")
+        self._concentration.setPlaceholderText(self.tr("e.g. 1.3E17; blank for undoped"))
         if layer and layer.doping_concentration_cm3 is not None:
             self._concentration.setText(f"{layer.doping_concentration_cm3:.8g}")
 
         form = QFormLayout()
-        form.addRow("Material", self._material)
-        form.addRow("Thickness", self._thickness)
-        form.addRow("Composition", self._composition)
-        form.addRow("Doping type", self._doping_type)
-        form.addRow("Concentration (cm⁻³)", self._concentration)
+        form.addRow(self.tr("Material"), self._material)
+        form.addRow(self.tr("Thickness"), self._thickness)
+        form.addRow(self.tr("Composition"), self._composition)
+        form.addRow(self.tr("Doping type"), self._doping_type)
+        form.addRow(self.tr("Concentration (cm⁻³)"), self._concentration)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
@@ -337,6 +350,6 @@ class LayerDialog(QDialog):
         try:
             self.layer()
         except (TypeError, ValueError) as exc:
-            QMessageBox.warning(self, "Invalid layer", str(exc))
+            QMessageBox.warning(self, self.tr("Invalid layer"), str(exc))
             return
         self.accept()

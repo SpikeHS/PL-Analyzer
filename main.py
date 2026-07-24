@@ -10,7 +10,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from types import TracebackType
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QCoreApplication, QTimer
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QApplication, QMessageBox
 
@@ -20,12 +20,13 @@ from core.configuration import ApplicationSettings, MaterialDatabase, applicatio
 from core.importing.service import SpectrumImportService
 from core.workspace import Workspace
 from export.peak_table import PeakTableExporter
+from ui.localization import AppLanguage, install_translations
 from ui.main_window import MainWindow
 from ui.preferences_dialog import load_analysis_preferences
 from ui.theme import apply_theme, load_theme_preference
 
 
-def main() -> int:
+def main(language: AppLanguage = AppLanguage.EN_US) -> int:
     """Create dependencies, install error boundaries, and run the Qt event loop."""
 
     try:
@@ -36,16 +37,17 @@ def main() -> int:
 
     log_path: Path | None = None
     try:
+        log_path = _configure_logging()
+        root = application_root()
+        installed_translations = install_translations(app, language, root)
         app.setApplicationName("PL Analyzer Pro")
-        app.setApplicationDisplayName("PL Analyzer Pro")
+        app.setApplicationDisplayName(QCoreApplication.translate("main", "PL Analyzer Pro"))
         app.setApplicationVersion(__version__)
         app.setOrganizationName("PL Analyzer Pro")
         app.setStyle("Fusion")
         app.setFont(QFont("Microsoft YaHei UI", 9))
         apply_theme(app, load_theme_preference())
 
-        log_path = _configure_logging()
-        root = application_root()
         settings = ApplicationSettings.from_json(root / "config" / "default_settings.json")
         analysis_defaults = load_analysis_preferences(settings.analysis)
         material_database = MaterialDatabase.from_json(root / "config" / "materials.json")
@@ -78,6 +80,7 @@ def main() -> int:
 
     sys.excepthook = exception_hook
     window.show()
+    _ = installed_translations
     smoke_exit_ms = os.environ.get("PL_ANALYZER_PRO_SMOKE_EXIT_MS")
     if smoke_exit_ms is not None:
         try:
@@ -119,13 +122,22 @@ def _report_startup_failure(error: Exception, log_path: Path | None) -> None:
         )
 
     if log_path is None:
-        log_note = "Application logging was unavailable."
+        log_note = QCoreApplication.translate(
+            "main",
+            "Application logging was unavailable.",
+        )
     else:
-        log_note = f"Log file: {log_path}"
+        log_note = QCoreApplication.translate(
+            "main",
+            "Log file: {path}",
+        ).format(path=log_path)
     try:
         QMessageBox.critical(
             None,
-            "PL Analyzer Pro could not start",
+            QCoreApplication.translate(
+                "main",
+                "PL Analyzer Pro could not start",
+            ),
             f"{error}\n\n{log_note}",
         )
     except Exception as popup_error:

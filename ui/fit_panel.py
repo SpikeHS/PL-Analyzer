@@ -6,7 +6,13 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Literal
 
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
+from PySide6.QtCore import (
+    QT_TRANSLATE_NOOP,
+    QAbstractTableModel,
+    QModelIndex,
+    Qt,
+    Signal,
+)
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -44,20 +50,32 @@ class FitTableModel(QAbstractTableModel):
     """Read-only metrics from successful material-window fits."""
 
     _HEADERS = (
-        "Sample",
-        "Material",
-        "Model",
-        "Peak",
-        "Position\n(nm)",
-        "Height\n(a.u.)",
-        "Area\n(a.u.·nm)",
-        "FWHM\n(nm)",
-        "R²",
-        "Adj. R²",
-        "AIC",
-        "BIC",
-        "Baseline",
+        QT_TRANSLATE_NOOP("FitTableModel", "Sample"),
+        QT_TRANSLATE_NOOP("FitTableModel", "Material"),
+        QT_TRANSLATE_NOOP("FitTableModel", "Model"),
+        QT_TRANSLATE_NOOP("FitTableModel", "Peak"),
+        QT_TRANSLATE_NOOP("FitTableModel", "Position\n(nm)"),
+        QT_TRANSLATE_NOOP("FitTableModel", "Height\n(a.u.)"),
+        QT_TRANSLATE_NOOP("FitTableModel", "Area\n(a.u.·nm)"),
+        QT_TRANSLATE_NOOP("FitTableModel", "FWHM\n(nm)"),
+        QT_TRANSLATE_NOOP("FitTableModel", "R²"),
+        QT_TRANSLATE_NOOP("FitTableModel", "Adj. R²"),
+        QT_TRANSLATE_NOOP("FitTableModel", "AIC"),
+        QT_TRANSLATE_NOOP("FitTableModel", "BIC"),
+        QT_TRANSLATE_NOOP("FitTableModel", "Baseline"),
     )
+    _MODEL_LABELS = {
+        FitModel.AUTO: QT_TRANSLATE_NOOP("FitTableModel", "auto"),
+        FitModel.GAUSSIAN: QT_TRANSLATE_NOOP("FitTableModel", "gaussian"),
+        FitModel.LORENTZIAN: QT_TRANSLATE_NOOP("FitTableModel", "lorentzian"),
+        FitModel.VOIGT: QT_TRANSLATE_NOOP("FitTableModel", "voigt"),
+        FitModel.PSEUDO_VOIGT: QT_TRANSLATE_NOOP("FitTableModel", "pseudo_voigt"),
+    }
+    _BASELINE_LABELS = {
+        BaselineMode.NONE: QT_TRANSLATE_NOOP("FitTableModel", "none"),
+        BaselineMode.CONSTANT: QT_TRANSLATE_NOOP("FitTableModel", "constant"),
+        BaselineMode.LINEAR: QT_TRANSLATE_NOOP("FitTableModel", "linear"),
+    }
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -87,7 +105,7 @@ class FitTableModel(QAbstractTableModel):
             and role == Qt.ItemDataRole.DisplayRole
             and 0 <= section < len(self._HEADERS)
         ):
-            return self._HEADERS[section]
+            return self.tr(self._HEADERS[section])
         return super().headerData(section, orientation, role)
 
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> object:
@@ -97,7 +115,7 @@ class FitTableModel(QAbstractTableModel):
         values: tuple[object, ...] = (
             record.sample_name,
             record.material_name,
-            record.model.value,
+            self.tr(self._MODEL_LABELS[record.model]),
             record.peak_number,
             f"{record.position_nm:.5f}",
             f"{record.height_au:.7g}",
@@ -107,7 +125,7 @@ class FitTableModel(QAbstractTableModel):
             ("—" if record.adjusted_r_squared is None else f"{record.adjusted_r_squared:.6f}"),
             f"{record.aic:.6g}",
             f"{record.bic:.6g}",
-            record.baseline_mode.value,
+            self.tr(self._BASELINE_LABELS[record.baseline_mode]),
         )
         if role == Qt.ItemDataRole.DisplayRole:
             return values[index.column()]
@@ -157,25 +175,40 @@ class FitPanel(QWidget):
     copy_requested = Signal(str)
     export_requested = Signal()
     settings_changed = Signal()
+    _MODEL_LABELS = {
+        FitModel.AUTO: QT_TRANSLATE_NOOP("FitPanel", "Auto"),
+        FitModel.GAUSSIAN: QT_TRANSLATE_NOOP("FitPanel", "Gaussian"),
+        FitModel.LORENTZIAN: QT_TRANSLATE_NOOP("FitPanel", "Lorentzian"),
+        FitModel.VOIGT: QT_TRANSLATE_NOOP("FitPanel", "Voigt"),
+        FitModel.PSEUDO_VOIGT: QT_TRANSLATE_NOOP("FitPanel", "Pseudo Voigt"),
+    }
+    _BASELINE_LABELS = {
+        BaselineMode.NONE: QT_TRANSLATE_NOOP("FitPanel", "None"),
+        BaselineMode.CONSTANT: QT_TRANSLATE_NOOP("FitPanel", "Constant"),
+        BaselineMode.LINEAR: QT_TRANSLATE_NOOP("FitPanel", "Linear"),
+    }
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._model_combo = QComboBox(self)
         for model in FitModel:
             self._model_combo.addItem(
-                model.value.replace("_", " ").title(),
+                self.tr(self._MODEL_LABELS[model]),
                 model.value,
             )
 
         self._baseline_combo = QComboBox(self)
         for baseline in BaselineMode:
-            self._baseline_combo.addItem(baseline.value.title(), baseline.value)
+            self._baseline_combo.addItem(
+                self.tr(self._BASELINE_LABELS[baseline]),
+                baseline.value,
+            )
         self._baseline_combo.setCurrentIndex(
             self._baseline_combo.findData(BaselineMode.LINEAR.value)
         )
 
         self._peak_count_combo = QComboBox(self)
-        self._peak_count_combo.addItem("Auto", "auto")
+        self._peak_count_combo.addItem(self.tr("Auto"), "auto")
         for count in range(1, 7):
             self._peak_count_combo.addItem(str(count), count)
 
@@ -187,7 +220,7 @@ class FitPanel(QWidget):
         self._minimum_distance.setDecimals(4)
         self._minimum_distance.setSuffix(" nm")
 
-        self._savgol_enabled = QCheckBox("Enable", self)
+        self._savgol_enabled = QCheckBox(self.tr("Enable"), self)
         self._savgol_window = QSpinBox(self)
         self._savgol_window.setRange(3, 999)
         self._savgol_window.setSingleStep(2)
@@ -208,16 +241,16 @@ class FitPanel(QWidget):
         self._savgol_polyorder.valueChanged.connect(self.settings_changed.emit)
 
         form = QFormLayout()
-        form.addRow("Line shape", self._model_combo)
-        form.addRow("Baseline", self._baseline_combo)
-        form.addRow("Peak count", self._peak_count_combo)
-        form.addRow("Auto max peaks", self._max_peaks)
-        form.addRow("Minimum distance", self._minimum_distance)
-        form.addRow("Savitzky-Golay", self._savgol_enabled)
-        form.addRow("SG window (odd)", self._savgol_window)
-        form.addRow("SG polynomial", self._savgol_polyorder)
+        form.addRow(self.tr("Line shape"), self._model_combo)
+        form.addRow(self.tr("Baseline"), self._baseline_combo)
+        form.addRow(self.tr("Peak count"), self._peak_count_combo)
+        form.addRow(self.tr("Auto max peaks"), self._max_peaks)
+        form.addRow(self.tr("Minimum distance"), self._minimum_distance)
+        form.addRow(self.tr("Savitzky-Golay"), self._savgol_enabled)
+        form.addRow(self.tr("SG window (odd)"), self._savgol_window)
+        form.addRow(self.tr("SG polynomial"), self._savgol_polyorder)
 
-        fit_button = QPushButton("Fit selected material windows", self)
+        fit_button = QPushButton(self.tr("Fit selected material windows"), self)
         fit_button.clicked.connect(self.fit_requested)
 
         self._table_model = FitTableModel(self)
@@ -227,9 +260,9 @@ class FitPanel(QWidget):
         self._table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self._table.setAlternatingRowColors(True)
 
-        copy_button = QPushButton("Copy", self)
+        copy_button = QPushButton(self.tr("Copy"), self)
         copy_button.clicked.connect(self._copy)
-        export_button = QPushButton("Export…", self)
+        export_button = QPushButton(self.tr("Export…"), self)
         export_button.clicked.connect(self.export_requested)
         buttons = QHBoxLayout()
         buttons.addWidget(copy_button)
@@ -237,19 +270,21 @@ class FitPanel(QWidget):
         buttons.addStretch(1)
 
         note = QLabel(
-            "Auto evaluates Gaussian, Lorentzian, Voigt and Pseudo-Voigt candidates "
-            "and selects by BIC. Fits always use raw linear intensity inside the "
-            "material windows selected on the Raw Peak tab.",
+            self.tr(
+                "Auto evaluates Gaussian, Lorentzian, Voigt and Pseudo-Voigt candidates "
+                "and selects by BIC. Fits always use raw linear intensity inside the "
+                "material windows selected on the Raw Peak tab."
+            ),
             self,
         )
         note.setWordWrap(True)
         note.setStyleSheet("color: #707070;")
 
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("v1.1 Model Fit", self))
+        layout.addWidget(QLabel(self.tr("v1.1 Model Fit"), self))
         layout.addLayout(form)
         layout.addWidget(fit_button)
-        layout.addWidget(QLabel("Fit Results", self))
+        layout.addWidget(QLabel(self.tr("Fit Results"), self))
         layout.addWidget(self._table, 1)
         layout.addLayout(buttons)
         layout.addWidget(note)

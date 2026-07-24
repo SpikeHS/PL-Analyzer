@@ -1,15 +1,16 @@
 # PL Analyzer Prototype
 
-**当前版本：v1.1**
+**当前版本：v1.1.1**
 
 PL Analyzer Pro 是面向 MBE 与 III–V 族半导体研究的光致发光（PL）分析软件。
 项目使用 Python、PySide6（Qt 6）、Matplotlib、NumPy、SciPy、openpyxl 和版本化 JSON，
 预计长期维护。
 
-当前仓库提供可运行的 v1.1 源码、受版本控制的 PyInstaller 构建链，以及本工作区内已通过
-启动与可视化复核的 `dist/PL Analyzer Pro.exe`。该本机构建尚未代码签名，也不等同于干净
-Windows 10/11 机器上的正式签发认证；验证证据见
-[v1.1 发布验证记录](docs/release_v1.1.md)。
+当前仓库提供可运行的 v1.1.1 源码、英文原版和简体中文版共用的 Qt Linguist 翻译架构，
+以及受版本控制的双目标 PyInstaller 构建链。两个版本使用完全相同的科学算法、材料数据库和
+`.plproj` 工程格式；差异仅限显示语言。发布产物尚未代码签名，也不等同于干净 Windows
+10/11 机器上的正式签发认证；验证证据见
+[v1.1.1 双语言发布说明](docs/release_v1.1.1.md)。
 
 ## v1.1 已实现功能
 
@@ -82,6 +83,8 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --upgrade pip
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 .\.venv\Scripts\python.exe main.py
+# 简体中文界面
+.\.venv\Scripts\python.exe main_zh.py
 ```
 
 运行验证：
@@ -96,11 +99,16 @@ $env:QT_QPA_PLATFORM = "offscreen"
 生成一文件、无控制台窗口的 Windows EXE：
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build_release.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\build_release.ps1 -Language all
 ```
 
-脚本会依次执行全部测试、Ruff、受控清理和 PyInstaller，并输出
-`dist\PL Analyzer Pro.exe` 的大小与 SHA-256。
+脚本会依次执行全部测试、Ruff、受控清理、两个隔离的 PyInstaller 构建和启动 smoke test，
+并输出：
+
+- `dist\PL-Analyzer-Pro-v1.1.1-Windows-x64-en-US.exe`（英文原版）
+- `dist\PL-Analyzer-Pro-v1.1.1-Windows-x64-zh-CN.exe`（简体中文版）
+- `dist\SHA256SUMS.txt`
 
 ## 使用方式
 
@@ -137,3 +145,4 @@ v1.1 尚不包含：
 - [材料搜索窗口与科学边界](docs/material_windows.md)
 - [开发与验证](docs/development.md)
 - [v1.1 发布验证记录](docs/release_v1.1.md)
+- [v1.1.1 双语言发布说明](docs/release_v1.1.1.md)

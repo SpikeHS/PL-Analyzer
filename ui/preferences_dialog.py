@@ -26,7 +26,7 @@ class PreferencesDialog(QDialog):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Preferences")
+        self.setWindowTitle(self.tr("Preferences"))
 
         self._relative_prominence = QDoubleSpinBox(self)
         self._relative_prominence.setRange(0.0, 100.0)
@@ -55,15 +55,17 @@ class PreferencesDialog(QDialog):
         self._gap_factor.setValue(defaults.gap_factor)
 
         form = QFormLayout()
-        form.addRow("Relative prominence", self._relative_prominence)
-        form.addRow("Noise threshold (σ)", self._noise_sigma)
-        form.addRow("Minimum peak distance", self._minimum_distance)
-        form.addRow("Maximum peaks / window", self._max_peaks)
-        form.addRow("Large-gap factor", self._gap_factor)
+        form.addRow(self.tr("Relative prominence"), self._relative_prominence)
+        form.addRow(self.tr("Noise threshold (σ)"), self._noise_sigma)
+        form.addRow(self.tr("Minimum peak distance"), self._minimum_distance)
+        form.addRow(self.tr("Maximum peaks / window"), self._max_peaks)
+        form.addRow(self.tr("Large-gap factor"), self._gap_factor)
 
         explanation = QLabel(
-            "These settings affect Raw Peak candidate detection only. Display "
-            "Normalize, Offset and Log never alter analysis input.",
+            self.tr(
+                "These settings affect Raw Peak candidate detection only. Display "
+                "Normalize, Offset and Log never alter analysis input."
+            ),
             self,
         )
         explanation.setWordWrap(True)
