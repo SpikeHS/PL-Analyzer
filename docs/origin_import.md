@@ -28,9 +28,12 @@ PL Analyzer Pro 内置 Origin worksheet/workbook 读取器，可以直接导入�
 - 上游许可证与署名：
   `core/importing/_origin_parser/LICENSE`、`core/importing/_origin_parser/NOTICE`
 
-本地副本只保留 worksheet/workbook 解码所需模块。上游解析算法和 `DataStruct` 数据契约保持
-不变；对上游文件的代码级修改仅限把绝对包导入改写为本私有包的相对导入，并在相关文件头部
-保留修改说明。`core.importing._origin_parser` 的 facade 负责按扩展名分派 OPJ/OPJU。
+本地副本只保留 worksheet/workbook 解码所需模块，`DataStruct` 数据契约保持不变。
+除私有包相对导入、Ruff 标注与 OPJ/OPJU 调度 facade 外，PL Analyzer Pro 维护两个有回归
+测试的定向兼容补丁：`opj.py` 支持 CPYA 4.2930 的 140-byte dataset header，并按结构偏移
+识别名称以避免误把 graph reference 当成数据头；`windows.py` 支持 341-byte `Pd<Name>`
+sheet header、493-byte column property、最长 16 字符的短列名，以及 `<Book>@N` 的逐 sheet
+元数据。完整本地修改记录见解析器目录中的 `UPSTREAM.md`。
 
 解析器不是 liborigin，也不包含或链接 GPL 解析代码。升级时不得跟随未固定的分支或重新手写
 解析逻辑；必须从经过审查的上游发布标签重新取回清单中的文件，更新固定提交，保留

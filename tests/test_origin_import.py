@@ -45,16 +45,74 @@ def _origin_block(payload: bytes) -> bytes:
     return struct.pack("<I", len(payload)) + b"\n" + payload + b"\n"
 
 
-def _origin_column_header(name: str) -> bytes:
-    payload = b"\x00" * 40 + name.encode("latin1") + b"\x00" + b"\x00" * 6
-    if len(payload) % 10 == 0:
-        payload += b"\x00"
-    return _origin_block(payload)
+def _origin_column_header(
+    name: str,
+    *,
+    size: int = 140,
+    name_offset: int = 0x58,
+) -> bytes:
+    """Build a real-layout CPYA dataset header.
+
+    CPYA 4.2930 uses 140-byte headers, so this fixture deliberately keeps the
+    header divisible by the 10-byte numeric record width.
+    """
+
+    encoded = name.encode("latin1") + b"\x00"
+    assert name_offset + len(encoded) <= size
+    payload = bytearray(size)
+    payload[2] = 1
+    payload[name_offset : name_offset + len(encoded)] = encoded
+    return _origin_block(bytes(payload))
 
 
 def _origin_numeric_column(values: tuple[float, ...]) -> bytes:
     payload = b"".join(b"\x00\x00" + struct.pack("<d", value) for value in values)
     return _origin_block(payload)
+
+
+def _origin_curve_reference(name: str) -> bytes:
+    """Build a graph block containing a dataset-like name at a wrong offset."""
+
+    encoded = name.encode("latin1") + b"\x00"
+    payload = bytearray(111)
+    payload[70 : 70 + len(encoded)] = encoded
+    return _origin_block(bytes(payload))
+
+
+def _origin_window_header(short_name: str, long_name: str) -> bytes:
+    payload = bytearray(240)
+    short = short_name.encode("latin1") + b"\x00"
+    title = long_name.encode("latin1") + b"\x00"
+    payload[2 : 2 + len(short)] = short
+    payload[0x80 : 0x80 + len(title)] = title
+    return _origin_block(bytes(payload))
+
+
+def _origin_sheet_header(name: str, *, size: int = 341) -> bytes:
+    payload = bytearray(size)
+    marker = b"Pd" + name.encode("latin1") + b"\x00"
+    payload[0xD0 : 0xD0 + len(marker)] = marker
+    return _origin_block(bytes(payload))
+
+
+def _origin_column_property(
+    short_name: str,
+    designation: int,
+    *,
+    storage_flavour: int = 0x0B,
+) -> bytes:
+    encoded = short_name.encode("latin1") + b"\x00"
+    assert len(encoded) <= 17
+    payload = bytearray(493)
+    payload[0x06] = storage_flavour
+    payload[0x11] = designation
+    payload[0x12 : 0x12 + len(encoded)] = encoded
+    payload[0x25] = 0x21
+    return _origin_block(bytes(payload))
+
+
+def _origin_column_label(long_name: str, unit: str = "", comment: str = "") -> bytes:
+    return _origin_block(f"{long_name}\r\n{unit}\r\n{comment}".encode("latin1"))
 
 
 def _synthetic_opj() -> bytes:
@@ -65,11 +123,42 @@ def _synthetic_opj() -> bytes:
         b"CPYA 4.3380 188 W64 #\n"
         + _origin_block(b"\x00" * 32)
         + spacer
+        + _origin_curve_reference("SPC_Detector9")
+        + _origin_numeric_column((10.0, 20.0, 30.0))
+        + spacer
         + _origin_column_header("Book1_A")
         + _origin_numeric_column((860.0, 870.0, 880.0))
         + spacer
         + _origin_column_header("Book1_B")
         + _origin_numeric_column((1.0, 4.0, 1.0))
+    )
+
+
+def _synthetic_legacy_multisheet_opj() -> bytes:
+    """Return a CPYA 4.2930-style Data sheet with explicit PL metadata."""
+
+    spacer = struct.pack("<I", 0) + b"\n"
+    return (
+        b"CPYA 4.2930 90#\n"
+        + _origin_block(b"\x00" * 107)
+        + spacer
+        + _origin_column_header("Book1_A@2")
+        + _origin_numeric_column((1000.0, 1100.0, 1200.0, 1300.0))
+        + spacer
+        + _origin_column_header("Book1_Detector9@2")
+        + _origin_numeric_column((1.0, 5.0, 2.0, 1.0))
+        + spacer
+        + spacer
+        + _origin_window_header("Book1", "Instrument PL")
+        + _origin_sheet_header("Graph")
+        + _origin_sheet_header("Data")
+        + _origin_column_property("A", 3, storage_flavour=0x8B)
+        + _origin_column_label("Wavelength", "nm")
+        + _origin_column_property("Detector9", 0)
+        + _origin_column_label("Signal", "counts")
+        + spacer
+        + _origin_sheet_header("Note")
+        + spacer
     )
 
 
@@ -414,6 +503,132 @@ def test_vendored_parser_decodes_synthetic_legacy_opj(tmp_path: Path) -> None:
 
     assert not report.spectra
     assert [issue.code for issue in report.issues] == ["E_IMPORT_ORIGIN_X_COLUMN"]
+
+
+def test_legacy_multisheet_opj_restores_explicit_pl_axis_metadata(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "legacy-multisheet.OPJ"
+    source.write_bytes(_synthetic_legacy_multisheet_opj())
+
+    books = read_origin_books(source)
+
+    assert len(books) == 1
+    book = books[0]
+    np.testing.assert_allclose(book.time, [1000.0, 1100.0, 1200.0, 1300.0])
+    np.testing.assert_allclose(book.values[:, 0], [1.0, 5.0, 2.0, 1.0])
+    assert book.metadata["origin_book"] == "Book1@2"
+    assert book.metadata["origin_book_long"] == "Instrument PL (sheet 2: Data)"
+    assert book.metadata["origin_sheet_name"] == "Data"
+    assert book.metadata["x_column_long"] == "Wavelength"
+    assert book.metadata["x_column_unit"] == "nm"
+    assert book.metadata["column_designations"] == {
+        "A": "X",
+        "Detector9": "Y",
+    }
+    assert book.labels == ("Signal",)
+    assert book.units == ("counts",)
+
+    report = SpectrumImportService().import_paths([source])
+
+    assert not report.issues
+    assert len(report.spectra) == 1
+    np.testing.assert_allclose(
+        report.spectra[0].wavelength_nm,
+        [1000.0, 1100.0, 1200.0, 1300.0],
+    )
+    np.testing.assert_allclose(report.spectra[0].intensity_au, [1.0, 5.0, 2.0, 1.0])
+    assert report.spectra[0].source.wavelength_column == "Wavelength (nm)"
+    assert report.spectra[0].source.intensity_column == "Signal (counts)"
+
+
+def test_bundled_backend_omits_auxiliary_book_without_three_numeric_pairs(
+    tmp_path: Path,
+) -> None:
+    auxiliary = SimpleNamespace(
+        time=np.asarray([0.0, np.nan, np.nan, np.nan]),
+        values=np.asarray(
+            [
+                [0.0, 0.0],
+                [np.nan, np.nan],
+                [np.nan, 0.0],
+                [np.nan, np.nan],
+            ]
+        ),
+        labels=("B", "C"),
+        units=("", ""),
+        metadata={
+            "origin_book": "Book1@3",
+            "origin_book_long": "Instrument PL (sheet 3: Note)",
+            "origin_sheet_name": "Note",
+            "x_column_name": "A",
+            "x_column_long": "A",
+            "x_column_unit": "",
+            "origin_column_names": ["B", "C"],
+            "column_designations": {"A": "X", "B": "Y", "C": "Y"},
+            "x_column_recovered": True,
+        },
+    )
+
+    worksheets = BundledOriginBackend(loader=lambda _path: [auxiliary]).read_project(
+        tmp_path / "auxiliary.opj"
+    )
+
+    assert worksheets == ()
+
+
+def test_legacy_dataset_name_at_offset_0x57_keeps_its_first_character(
+    tmp_path: Path,
+) -> None:
+    spacer = struct.pack("<I", 0) + b"\n"
+    source = tmp_path / "legacy-name-offset.opj"
+    source.write_bytes(
+        b"CPYA 3.5 90#\n"
+        + _origin_block(b"\x00" * 32)
+        + spacer
+        + _origin_column_header("Book1_A", name_offset=0x57)
+        + _origin_numeric_column((860.0, 870.0, 880.0))
+        + spacer
+        + _origin_column_header("Book1_B", name_offset=0x57)
+        + _origin_numeric_column((1.0, 4.0, 1.0))
+    )
+
+    books = read_origin_books(source)
+
+    assert len(books) == 1
+    assert books[0].metadata["origin_book"] == "Book1"
+    np.testing.assert_allclose(books[0].time, [860.0, 870.0, 880.0])
+    np.testing.assert_allclose(books[0].values[:, 0], [1.0, 4.0, 1.0])
+
+
+def test_bundled_backend_keeps_short_real_worksheet_for_normal_validation(
+    tmp_path: Path,
+) -> None:
+    short_data_sheet = SimpleNamespace(
+        time=np.asarray([1000.0, 1001.0]),
+        values=np.asarray([[1.0], [2.0]]),
+        labels=("Signal",),
+        units=("counts",),
+        metadata={
+            "origin_book": "Book1@2",
+            "origin_book_long": "Instrument PL (sheet 2: Data)",
+            "origin_sheet_name": "Data",
+            "x_column_name": "A",
+            "x_column_long": "Wavelength",
+            "x_column_unit": "nm",
+            "origin_column_names": ["B"],
+            "column_designations": {"A": "X", "B": "Y"},
+            "x_column_recovered": True,
+        },
+    )
+
+    worksheets = BundledOriginBackend(loader=lambda _path: [short_data_sheet]).read_project(
+        tmp_path / "short-data.opj"
+    )
+
+    assert len(worksheets) == 1
+    assert worksheets[0].name == "Instrument PL (sheet 2: Data) [Book1@2]"
+    assert worksheets[0].columns[0].values == (1000.0, 1001.0)
 
 
 def test_vendored_origin_parser_has_no_unapproved_runtime_dependencies() -> None:

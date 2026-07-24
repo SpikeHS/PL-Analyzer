@@ -193,13 +193,14 @@ HTTP(S) 链接具有合法绝对 URI；如开发机安装了 markdownlint，可�
 一文件 Windows 构建。两个目标使用隔离 workpath，并在生成后分别执行定时启动 smoke test；
 脚本还从受版本控制的来源逐字收集完整 `LICENSE`、`NOTICE` 与 `UPSTREAM.md`，生成公开的
 `dist/THIRD-PARTY-NOTICES.txt`。最终 `SHA256SUMS.txt` 必须覆盖两个 EXE 和该声明文件。
-详情见 [v1.1.2 Origin 原生导入发布说明](release_v1.1.2.md)。
+详情见 [v1.1.3 旧版 Origin OPJ 兼容发布说明](release_v1.1.3.md)。
 
 Origin 导入采用固定到 `quantized-lab` v0.11.0、提交
 `c34980b82947af3f82f7a9a4ff5692610ba5398f` 的 Apache-2.0 clean-room
 workbook/worksheet reader subset。它不依赖 Origin/COM，不包含上游 Web 服务，也没有使用或
-包含 GPL `liborigin` 代码。绝对包导入改为私有包相对导入、调度 facade 和 Ruff 兼容标注等
-本地修改必须继续记录在 `UPSTREAM.md`。
+包含 GPL `liborigin` 代码。绝对包导入改为私有包相对导入、调度 facade、Ruff 兼容标注，
+以及 CPYA 4.2930 dataset header / multi-sheet metadata 定向兼容等本地修改，必须继续记录在
+`UPSTREAM.md`。
 
 正式对外签发仍需：
 
@@ -217,5 +218,5 @@ workbook/worksheet reader subset。它不依赖 Origin/COM，不包含上游 Web
 7. 核对 `SHA256SUMS.txt` 有且仅有两个 EXE 和 `THIRD-PARTY-NOTICES.txt` 三条记录；
 8. 记录构建工具版本、产物哈希、解析器固定提交、第三方许可证清单和签名状态。
 
-开发机 EXE 可作为 v1.1.2 可运行交付物，但不得把它描述为已签名或已完成跨机认证的正式
+开发机 EXE 可作为 v1.1.3 可运行交付物，但不得把它描述为已签名或已完成跨机认证的正式
 安装包。

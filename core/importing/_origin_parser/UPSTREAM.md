@@ -25,13 +25,26 @@ This directory vendors the worksheet/workbook-reading subset of
 
 ## Local changes
 
-The parsing algorithms and data contract are unchanged. Six modules have only
-their absolute `quantized...` imports rewritten to imports relative to this
-private package. Each such file carries a prominent modification notice. The
-two reader modules also carry file-level Ruff suppressions so the upstream
-Python 3.11-compatible import order and generic syntax remain unchanged.
-`__init__.py` is a PL Analyzer Pro facade that dispatches `.opj` and `.opju`
-to the corresponding upstream workbook reader.
+Six modules have their absolute `quantized...` imports rewritten to imports
+relative to this private package. The two reader modules also carry file-level
+Ruff suppressions, and `__init__.py` is a PL Analyzer Pro facade that dispatches
+`.opj` and `.opju` to the corresponding upstream workbook reader.
+
+PL Analyzer Pro additionally maintains two narrowly scoped, regression-tested
+CPYA compatibility changes:
+
+- `opj.py` recognizes dataset names at the format's structural name offsets,
+  including 140-byte CPYA 4.2930 headers whose size is divisible by the
+  10-byte numeric-record width, preserves the oldest 0x57-offset names, and
+  prevents graph references from being mistaken for dataset headers.
+- `windows.py` accepts the legacy 341-byte `Pd<Name>` sheet header and
+  493-byte column-property block (including high-bit storage flags), supports
+  Origin short names up to 16 characters, and maps each structurally
+  identified sheet and sheet type to its exact `<Book>@N` metadata key.
+
+The `DataStruct` contract is unchanged. Each modified upstream file carries a
+prominent notice and the compatibility behavior is covered by redistributable
+synthetic fixtures; user project files are not vendored.
 
 The subset intentionally excludes figure/graph decoding, matrix pages, notes,
 results logs, project-folder trees, templates, writers, routes, and all web

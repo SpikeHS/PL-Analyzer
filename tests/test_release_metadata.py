@@ -9,7 +9,7 @@ from pathlib import Path
 from core import __version__
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "1.1.2"
+EXPECTED_VERSION = "1.1.3"
 EXPECTED_TARGETS = {
     "en-US": ("main.py", "version_info.txt"),
     "zh-CN": ("main_zh.py", "version_info_zh_CN.txt"),
@@ -36,8 +36,8 @@ def test_windows_version_resources_match_each_release_artifact() -> None:
         resource_text = resource_path.read_text(encoding="utf-8")
         artifact_name = f"PL-Analyzer-Pro-v{EXPECTED_VERSION}-Windows-x64-{language}.exe"
 
-        assert "filevers=(1, 1, 2, 0)" in resource_text
-        assert "prodvers=(1, 1, 2, 0)" in resource_text
+        assert "filevers=(1, 1, 3, 0)" in resource_text
+        assert "prodvers=(1, 1, 3, 0)" in resource_text
         assert _string_struct_value(resource_text, "FileVersion") == EXPECTED_VERSION
         assert _string_struct_value(resource_text, "ProductVersion") == EXPECTED_VERSION
         assert _string_struct_value(resource_text, "OriginalFilename") == artifact_name
@@ -89,13 +89,13 @@ def test_build_script_publishes_and_hashes_complete_origin_notices() -> None:
     assert "----- APACHE LICENSE 2.0 -----" in script
 
 
-def test_v112_release_documents_disclose_origin_scope_and_license() -> None:
+def test_v113_release_documents_disclose_origin_scope_and_license() -> None:
     """Release-facing documents must retain the native-reader support boundary."""
 
     documents = (
         PROJECT_ROOT / "README.md",
         PROJECT_ROOT / "docs" / "development.md",
-        PROJECT_ROOT / "docs" / "release_v1.1.2.md",
+        PROJECT_ROOT / "docs" / "release_v1.1.3.md",
     )
     combined = "\n".join(path.read_text(encoding="utf-8") for path in documents)
 
