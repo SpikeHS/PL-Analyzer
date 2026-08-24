@@ -1,27 +1,32 @@
 # PL Analyzer Pro
 
-**当前版本：v1.1.3**
+**当前版本：v1.1.4**
 
 PL Analyzer Pro 是面向 MBE 与 III–V 族半导体研究的光致发光（PL）分析软件。
 项目使用 Python、PySide6（Qt 6）、Matplotlib、NumPy、SciPy、openpyxl 和版本化 JSON，
 预计长期维护。
 
-当前仓库提供可运行的 v1.1.3 源码、英文原版和简体中文版共用的 Qt Linguist 翻译架构，
+当前仓库提供可运行的 v1.1.4 源码、英文原版和简体中文版共用的 Qt Linguist 翻译架构，
 以及受版本控制的双目标 PyInstaller 构建链。两个版本使用完全相同的科学算法、材料数据库和
 `.plproj` 工程格式；差异仅限显示语言。发布产物尚未代码签名，也不等同于干净 Windows
 10/11 机器上的正式签发认证；验证证据见
-[v1.1.3 旧版 Origin OPJ 兼容发布说明](docs/release_v1.1.3.md)。
+[v1.1.4 DAT 与参考样式导出发布说明](docs/release_v1.1.4.md)。
 
 ## v1.1 已实现功能
 
 ### 数据导入与多样品绘图
 
-- 拖拽或文件选择批量导入 Origin OPJ/OPJU、CSV、XLSX、XLSM 和旧版 XLS。
+- 拖拽或文件选择批量导入仪器 DAT、Origin OPJ/OPJU、CSV、XLSX、XLSM 和旧版 XLS。
 - Origin 与 Excel 中每个可识别 worksheet/Sheet 独立导入；坏文件或坏 Sheet 不会丢失同批
   成功结果。
 - 根据中英文表头和数值结构自动识别波长列与强度列，无需指定列号。
 - 左侧样品勾选、自动颜色、多样品同轴叠加，以及 Matplotlib 缩放、平移工具栏。
 - Raw、Normalize、Offset、Linear、Log、Legend 和 Grid；显示变换不会覆盖原始数组。
+
+仪器 DAT 适配器识别 `Wavelength, Signal, Baseline` 三列和文件头中的测量元数据，导入强度
+明确计算为 `Signal − Baseline`。样品名优先取 `Folder` 元数据末级，Laser、Power、
+Temperature 等键值随 `.plproj` 保存；无法识别为该仪器结构的其他 `.dat` 会以稳定错误拒绝，
+不会按通用文本猜测。
 
 `.xlsx/.xlsm` 由 `openpyxl` 读取；旧二进制 `.xls` 由隔离的 `xlrd` 适配器读取。
 OPJ/OPJU 由固定在 `quantized-lab` v0.11.0、提交
@@ -43,6 +48,21 @@ Apache-2.0 的完整 `LICENSE`、`NOTICE`、固定上游版本、提交和本地
 `SHA256SUMS.txt`，使最终用户无需解包 EXE 即可阅读完整第三方声明。
 支持语义、限制、错误恢复和许可证发布门槛见
 [Origin OPJ/OPJU 原生导入](docs/origin_import.md)。
+
+### 参考样式 PNG 与配套数据
+
+- `File → Export → Export reference-style PNG` 为恰好一条可见光谱生成 2400×1500、300 dpi
+  的白底演示/投稿图。
+- 图中使用深蓝标题、青绿色短横线、红色光谱、蓝色峰位/半高宽标记，并可标注显著次峰或
+  弱肩峰。
+- 可同时导出版本化 JSON 指标和 CSV 绘图数据；CSV 保留导入强度、显示平滑副本、展示基线
+  校正强度、归一化强度和光子能量。
+- 展示分析会报告全谱主峰、峰能量、积分强度、质心、噪声/SNR、次峰和
+  `Presentation FWHM`。
+
+`Presentation FWHM` 是轻度 Gaussian 平滑后、相对估计基线的半高宽，只用于快速展示和
+插值标注。它与 Raw Peak 的半 prominence 宽度、模型拟合 FWHM 分开命名、分开保存，绝不
+覆盖后两类科学结果。平滑数组也不会回写原始光谱。
 
 ### 多材料 Raw Peak
 
@@ -126,8 +146,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 脚本会依次执行全部测试、Ruff、受控清理、两个隔离的 PyInstaller 构建和启动 smoke test，
 并输出：
 
-- `dist\PL-Analyzer-Pro-v1.1.3-Windows-x64-en-US.exe`（英文原版）
-- `dist\PL-Analyzer-Pro-v1.1.3-Windows-x64-zh-CN.exe`（简体中文版）
+- `dist\PL-Analyzer-Pro-v1.1.4-Windows-x64-en-US.exe`（英文原版）
+- `dist\PL-Analyzer-Pro-v1.1.4-Windows-x64-zh-CN.exe`（简体中文版）
 - `dist\THIRD-PARTY-NOTICES.txt`（可公开阅读的完整第三方声明）
 - `dist\SHA256SUMS.txt`
 
@@ -141,6 +161,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 4. 在 Model Fit 页选择线型/Auto、基线、峰数和可选 Savitzky–Golay，再运行拟合。
 5. 检查残差意义、BIC、R²、峰形与外延结构，而不是只接受自动模型名称。
 6. 在 Layer Editor 记录外延结构，保存 `.plproj`，再导出图和结果表。
+
+若只需要复现原先的 DAT→PNG 快速流程：导入一份 DAT，确保左侧仅该光谱可见，然后选择
+`File → Export → Export reference-style PNG`；保存时可选择是否同时输出 JSON 与 CSV。
 
 ## 科学语义与当前边界
 
@@ -172,3 +195,4 @@ v1.1 尚不包含：
 - [v1.1.1 双语言发布说明](docs/release_v1.1.1.md)
 - [v1.1.2 Origin 原生导入发布说明](docs/release_v1.1.2.md)
 - [v1.1.3 旧版 Origin OPJ 兼容发布说明](docs/release_v1.1.3.md)
+- [v1.1.4 DAT 与参考样式导出发布说明](docs/release_v1.1.4.md)
