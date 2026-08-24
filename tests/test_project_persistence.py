@@ -50,6 +50,7 @@ def _project() -> PLProject:
                     sheet_name="PL 300 K",
                     wavelength_column="波长 (nm)",
                     intensity_column="Intensity",
+                    metadata=(("Laser", "532 nm"), ("Temperature", "25 C")),
                 ),
                 display=DisplayStyle(color="#12abef", visible=False),
                 diagnostics=("sorted wavelength",),
@@ -145,6 +146,8 @@ def test_project_round_trip_preserves_layers_arrays_and_analysis(
     assert spectrum.display.color == "#12abef"
     assert spectrum.display.visible is False
     assert spectrum.source.file_path == "C:/实验数据/AGA017.xlsx"
+    assert spectrum.source.metadata_value("laser") == "532 nm"
+    assert spectrum.source.metadata_value("temperature") == "25 C"
     settings = restored.workspace.plot_settings
     assert settings.amplitude_mode is AmplitudeMode.NORMALIZE
     assert settings.offset_enabled is True
@@ -208,6 +211,21 @@ def test_registered_migration_advances_exactly_one_schema(tmp_path: Path) -> Non
     restored = ProjectPersistence(migrations={0: migrate_zero_to_one}).load(target)
 
     assert restored.layers[0].material == "GaAs"
+
+
+def test_v2_migration_adds_empty_source_metadata(tmp_path: Path) -> None:
+    target = tmp_path / "v2-no-source-metadata.plproj"
+    persistence = ProjectPersistence()
+    persistence.save(_project(), target)
+    payload = json.loads(target.read_text(encoding="utf-8"))
+    payload["schema_version"] = 2
+    source_payload = payload["project"]["workspace"]["spectra"][0]["source"]
+    del source_payload["metadata"]
+    target.write_text(json.dumps(payload), encoding="utf-8")
+
+    restored = persistence.load(target)
+
+    assert restored.workspace.spectra[0].source.metadata == ()
 
 
 def test_v1_migration_updates_every_legacy_material_reference(

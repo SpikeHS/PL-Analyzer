@@ -31,7 +31,7 @@ from core.project import JSONValue, Layer, MaterialWindowSnapshot, PLProject
 from core.workspace import Workspace
 
 PROJECT_FORMAT_ID = "pl-analyzer-pro-project"
-PROJECT_SCHEMA_VERSION = 2
+PROJECT_SCHEMA_VERSION = 3
 
 type Migration = Callable[[dict[str, Any]], dict[str, Any]]
 
@@ -47,7 +47,10 @@ class UnsupportedProjectVersionError(ProjectPersistenceError):
 def _default_migrations() -> dict[int, Migration]:
     """Return built-in, single-step project migrations."""
 
-    return {1: _migrate_v1_to_v2}
+    return {
+        1: _migrate_v1_to_v2,
+        2: _migrate_v2_to_v3,
+    }
 
 
 def _migrate_v1_to_v2(payload: dict[str, Any]) -> dict[str, Any]:
@@ -79,6 +82,26 @@ def _migrate_v1_to_v2(payload: dict[str, Any]) -> dict[str, Any]:
                         _rewrite_assignment_window(assignment)
 
     migrated["schema_version"] = 2
+    return migrated
+
+
+def _migrate_v2_to_v3(payload: dict[str, Any]) -> dict[str, Any]:
+    """Add the optional instrument metadata object to every spectrum source."""
+
+    migrated = copy.deepcopy(payload)
+    project = migrated.get("project")
+    if isinstance(project, dict):
+        workspace = project.get("workspace")
+        if isinstance(workspace, dict):
+            spectra = workspace.get("spectra")
+            if isinstance(spectra, list):
+                for spectrum in spectra:
+                    if not isinstance(spectrum, dict):
+                        continue
+                    source = spectrum.get("source")
+                    if isinstance(source, dict):
+                        source.setdefault("metadata", {})
+    migrated["schema_version"] = 3
     return migrated
 
 
@@ -430,6 +453,7 @@ def _spectrum_to_payload(spectrum: SpectrumSeries) -> dict[str, JSONValue]:
             "sheet_name": spectrum.source.sheet_name,
             "wavelength_column": spectrum.source.wavelength_column,
             "intensity_column": spectrum.source.intensity_column,
+            "metadata": {key: value for key, value in spectrum.source.metadata},
         },
         "display": {
             "color": spectrum.display.color,
@@ -445,6 +469,14 @@ def _spectrum_from_payload(payload: dict[str, Any]) -> SpectrumSeries:
     sheet_name = source_payload.get("sheet_name")
     if sheet_name is not None:
         sheet_name = _text(sheet_name, "sheet_name", allow_empty=True)
+    metadata_payload = _object(source_payload.get("metadata", {}), "source.metadata")
+    metadata = tuple(
+        (
+            _text(key, "source.metadata key"),
+            _text(value, f"source.metadata.{key}", allow_empty=True),
+        )
+        for key, value in metadata_payload.items()
+    )
     return SpectrumSeries(
         spectrum_id=_text(payload["spectrum_id"], "spectrum_id"),
         name=_text(payload["name"], "spectrum name"),
@@ -461,6 +493,7 @@ def _spectrum_from_payload(payload: dict[str, Any]) -> SpectrumSeries:
                 source_payload["intensity_column"],
                 "source.intensity_column",
             ),
+            metadata=metadata,
         ),
         display=DisplayStyle(
             color=_text(display_payload["color"], "display.color", allow_empty=True),

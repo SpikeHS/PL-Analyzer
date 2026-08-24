@@ -123,9 +123,9 @@ class SpectrumImportService:
             issues.extend(sheet_errors)
             use_sheet_suffix = len(detected_sheets) > 1
             for detected in detected_sheets:
-                display_name = path.stem
+                display_name = detected.sheet.display_name or path.stem
                 if use_sheet_suffix and detected.sheet.name:
-                    display_name = f"{path.stem} / {detected.sheet.name}"
+                    display_name = f"{display_name} / {detected.sheet.name}"
                 spectra.append(
                     SpectrumSeries(
                         spectrum_id=str(uuid4()),
@@ -137,8 +137,13 @@ class SpectrumImportService:
                             sheet_name=detected.sheet.name,
                             wavelength_column=detected.detection.wavelength_label,
                             intensity_column=detected.detection.intensity_label,
+                            metadata=detected.sheet.metadata,
                         ),
-                        diagnostics=detected.prepared.diagnostics,
+                        diagnostics=tuple(
+                            dict.fromkeys(
+                                (*detected.sheet.diagnostics, *detected.prepared.diagnostics)
+                            )
+                        ),
                     )
                 )
 

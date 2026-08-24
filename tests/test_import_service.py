@@ -8,7 +8,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from core.importing.readers import XlsReader
+from core.errors import DataImportError
+from core.importing.readers import DatReader, ReaderRegistry, XlsReader
 from core.importing.service import SpectrumImportService
 
 
@@ -25,6 +26,55 @@ def test_imports_gb18030_csv_with_automatic_columns(tmp_path: Path) -> None:
     assert len(report.spectra) == 1
     assert report.spectra[0].name == "AGA017"
     assert report.spectra[0].source.wavelength_column == "波长 (nm)"
+
+
+def test_imports_instrument_dat_with_baseline_correction_and_metadata(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "instrument-export.dat"
+    source.write_text(
+        "\n".join(
+            (
+                "ASCII",
+                r"Folder : d:\iii-v pl\2026\qw\qw-12",
+                "Laser : 532.0 nm",
+                "Power : 45.0 mW",
+                "Wavelength, Signal, Baseline",
+                "[nm], [mV], [mV]",
+                "760.0, 1.25, 0.25",
+                "761.0, 4.50, 0.50",
+                "762.0, 2.75, 0.25",
+            )
+        ),
+        encoding="ascii",
+    )
+
+    report = SpectrumImportService().import_paths([source])
+
+    assert not report.issues
+    assert len(report.spectra) == 1
+    spectrum = report.spectra[0]
+    assert spectrum.name == "QW-12"
+    assert spectrum.intensity_au.tolist() == [1.0, 4.0, 2.5]
+    assert spectrum.source.wavelength_column == "Wavelength (nm)"
+    assert spectrum.source.intensity_column == "Corrected signal (mV)"
+    assert spectrum.source.metadata_value("laser") == "532.0 nm"
+    assert spectrum.source.metadata_value("POWER") == "45.0 mW"
+    assert "INSTRUMENT_BASELINE_SUBTRACTED" in spectrum.diagnostics
+
+
+def test_dat_reader_rejects_non_spectrometer_dat(tmp_path: Path) -> None:
+    source = tmp_path / "invalid.dat"
+    source.write_text("unrelated application data", encoding="utf-8")
+
+    with pytest.raises(DataImportError) as caught:
+        DatReader().read(source)
+
+    assert getattr(caught.value, "code", None) == "E_IMPORT_DAT_STRUCTURE"
+
+
+def test_default_registry_advertises_dat() -> None:
+    assert ".dat" in ReaderRegistry().supported_extensions
 
 
 def test_imports_each_compatible_xlsx_sheet_and_reports_bad_sheet(

@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import csv
+import re
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any, Protocol
 
 from core.errors import DataImportError
@@ -16,6 +17,9 @@ class TabularSheet:
 
     name: str | None
     rows: tuple[tuple[Any, ...], ...]
+    display_name: str | None = None
+    metadata: tuple[tuple[str, str], ...] = ()
+    diagnostics: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,6 +74,75 @@ class CsvReader:
         except csv.Error:
             rows = tuple(tuple(row) for row in csv.reader(text.splitlines()))
         return (TabularSheet(name=None, rows=rows),)
+
+
+class DatReader:
+    """Read the three-column ASCII export produced by the PL spectrometer."""
+
+    _ENCODINGS = ("utf-8-sig", "gb18030")
+    _DATA_ROW = re.compile(
+        r"^\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][+-]?\d+)?)\s*,\s*"
+        r"([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][+-]?\d+)?)\s*,\s*"
+        r"([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][+-]?\d+)?)\s*$"
+    )
+
+    def read(self, path: Path) -> tuple[TabularSheet, ...]:
+        text = self._read_text(path)
+        metadata: list[tuple[str, str]] = []
+        corrected_rows: list[tuple[float, float]] = []
+        for raw_line in text.splitlines():
+            line = raw_line.strip()
+            match = self._DATA_ROW.match(line)
+            if match is not None:
+                wavelength, signal, baseline = (float(value) for value in match.groups())
+                corrected_rows.append((wavelength, signal - baseline))
+                continue
+            if ":" in line and not corrected_rows:
+                key, value = line.split(":", 1)
+                normalized_key = " ".join(key.split())
+                if normalized_key:
+                    metadata.append((normalized_key, value.strip()))
+
+        if len(corrected_rows) < 3:
+            raise DataImportError(
+                f"No valid three-column PL spectrum was found in DAT file: {path.name}",
+                code="E_IMPORT_DAT_STRUCTURE",
+                detail="Expected Wavelength, Signal, Baseline rows with at least three points.",
+            )
+
+        rows: tuple[tuple[Any, ...], ...] = (
+            ("Wavelength (nm)", "Corrected signal (mV)"),
+            *corrected_rows,
+        )
+        metadata_tuple = tuple(metadata)
+        return (
+            TabularSheet(
+                name=None,
+                rows=rows,
+                display_name=_dat_sample_name(path, metadata_tuple),
+                metadata=metadata_tuple,
+                diagnostics=("INSTRUMENT_BASELINE_SUBTRACTED",),
+            ),
+        )
+
+    def _read_text(self, path: Path) -> str:
+        last_error: UnicodeError | None = None
+        for encoding in self._ENCODINGS:
+            try:
+                return path.read_text(encoding=encoding)
+            except UnicodeError as exc:
+                last_error = exc
+            except OSError as exc:
+                raise DataImportError(
+                    f"Unable to read DAT file: {path.name}",
+                    code="E_IMPORT_FILE_READ",
+                    detail=str(exc),
+                ) from exc
+        raise DataImportError(
+            f"Unable to decode DAT file: {path.name}",
+            code="E_IMPORT_DAT_ENCODING",
+            detail=str(last_error) if last_error else None,
+        )
 
 
 class XlsxReader:
@@ -146,6 +219,7 @@ class ReaderRegistry:
 
             origin_reader = OriginProjectReader()
         self._readers: dict[str, TabularReader] = {
+            ".dat": DatReader(),
             ".csv": CsvReader(),
             ".xlsx": XlsxReader(),
             ".xlsm": XlsxReader(),
@@ -175,3 +249,23 @@ class ReaderRegistry:
                 code="E_IMPORT_UNSUPPORTED_FORMAT",
             )
         return reader.read(path)
+
+
+def _dat_sample_name(path: Path, metadata: tuple[tuple[str, str], ...]) -> str:
+    values = {key.strip().casefold(): value.strip() for key, value in metadata}
+    folder = values.get("folder", "")
+    if folder:
+        candidate = PureWindowsPath(folder).name or Path(folder).name
+        if candidate:
+            return _clean_sample_name(candidate)
+    filename = values.get("filename", "")
+    if filename:
+        return _clean_sample_name(Path(filename).stem)
+    return _clean_sample_name(path.stem)
+
+
+def _clean_sample_name(value: str) -> str:
+    cleaned = re.sub(r"[^0-9A-Za-z._-]+", "-", value.strip()).strip("-_.")
+    if not cleaned:
+        return "PL-sample"
+    return cleaned.upper() if cleaned.casefold().startswith("qw-") else cleaned
