@@ -401,244 +401,249 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../../ui/main_window.py" line="97"/>
+        <location filename="../../ui/main_window.py" line="99"/>
         <source>PL Analyzer Pro — v{version}</source>
         <translation>PL Analyzer Pro — v{version}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="116"/>
+        <location filename="../../ui/main_window.py" line="118"/>
         <source>Raw Peak</source>
         <translation>原始峰</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="117"/>
+        <location filename="../../ui/main_window.py" line="119"/>
         <source>Fit</source>
         <translation>拟合</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="123"/>
+        <location filename="../../ui/main_window.py" line="125"/>
         <source>PL Analysis</source>
         <translation>PL 分析</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="124"/>
+        <location filename="../../ui/main_window.py" line="126"/>
         <source>Layer Editor</source>
         <translation>外延层编辑器</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="127"/>
+        <location filename="../../ui/main_window.py" line="129"/>
         <source>Log</source>
         <translation>日志</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="145"/>
+        <location filename="../../ui/main_window.py" line="147"/>
         <source>PL Analyzer Pro v{version} is ready.</source>
         <translation>PL Analyzer Pro v{version} 已就绪。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="163"/>
+        <location filename="../../ui/main_window.py" line="165"/>
         <source>Loaded {filename}{sheet} as {name} ({points} points).</source>
         <translation>已加载 {filename}{sheet}，名称为 {name}（{points} 个数据点）。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="184"/>
+        <location filename="../../ui/main_window.py" line="186"/>
         <source>Imported {count} spectrum/spectra.</source>
         <translation>已导入 {count} 条光谱。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="193"/>
+        <location filename="../../ui/main_window.py" line="195"/>
         <source>
 • …and {count} more (see Log).</source>
         <translation>
 • …另有 {count} 项（见日志）。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="198"/>
+        <location filename="../../ui/main_window.py" line="200"/>
         <source>Some data could not be imported</source>
         <translation>部分数据无法导入</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="202"/>
+        <location filename="../../ui/main_window.py" line="204"/>
         <source>Import failed</source>
         <translation>导入失败</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="209"/>
+        <location filename="../../ui/main_window.py" line="211"/>
         <source>Unhandled error: {error}</source>
         <translation>未处理的错误：{error}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="213"/>
+        <location filename="../../ui/main_window.py" line="215"/>
         <source>Unexpected error</source>
         <translation>意外错误</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="215"/>
+        <location filename="../../ui/main_window.py" line="217"/>
         <source>An unexpected error occurred. The application will remain open when possible. See the Log and application log file for details.</source>
         <translation>发生意外错误。应用程序将尽可能保持运行。详情请查看“日志”面板和应用程序日志文件。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="247"/>
+        <location filename="../../ui/main_window.py" line="249"/>
         <source>&amp;New project</source>
         <translation>新建工程(&amp;N)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="251"/>
+        <location filename="../../ui/main_window.py" line="253"/>
         <source>&amp;Open data…</source>
         <translation>打开数据(&amp;D)…</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="255"/>
+        <location filename="../../ui/main_window.py" line="257"/>
         <source>Open &amp;project…</source>
         <translation>打开工程(&amp;O)…</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="258"/>
+        <location filename="../../ui/main_window.py" line="260"/>
         <source>&amp;Save project</source>
         <translation>保存工程(&amp;S)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="261"/>
+        <location filename="../../ui/main_window.py" line="263"/>
         <source>Save project &amp;as…</source>
         <translation>工程另存为(&amp;A)…</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="265"/>
+        <location filename="../../ui/main_window.py" line="267"/>
         <source>Export &amp;plot…</source>
         <translation>导出图形(&amp;P)…</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="267"/>
+        <location filename="../../ui/main_window.py" line="270"/>
+        <source>Export &amp;reference-style PNG…</source>
+        <translation>导出参考样式 PNG(&amp;R)…</translation>
+    </message>
+    <message>
+        <location filename="../../ui/main_window.py" line="274"/>
         <source>Export peak &amp;table…</source>
         <translation>导出峰表(&amp;T)…</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="269"/>
+        <location filename="../../ui/main_window.py" line="276"/>
         <source>Export &amp;fit table…</source>
         <translation>导出拟合表(&amp;F)…</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="272"/>
+        <location filename="../../ui/main_window.py" line="279"/>
         <source>E&amp;xit</source>
         <translation>退出(&amp;X)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="276"/>
+        <location filename="../../ui/main_window.py" line="283"/>
         <source>&amp;Peak Search</source>
         <translation>寻峰(&amp;P)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="279"/>
+        <location filename="../../ui/main_window.py" line="286"/>
         <source>&amp;Fit selected windows</source>
         <translation>拟合已选窗口(&amp;F)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="285"/>
+        <location filename="../../ui/main_window.py" line="292"/>
         <source>&amp;Raw</source>
         <translation>原始(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="286"/>
+        <location filename="../../ui/main_window.py" line="293"/>
         <source>&amp;Normalize</source>
         <translation>归一化(&amp;N)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="298"/>
+        <location filename="../../ui/main_window.py" line="305"/>
         <source>&amp;Offset</source>
         <translation>偏移(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="304"/>
+        <location filename="../../ui/main_window.py" line="311"/>
         <source>&amp;Linear scale</source>
         <translation>线性坐标(&amp;I)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="305"/>
+        <location filename="../../ui/main_window.py" line="312"/>
         <source>Lo&amp;g scale</source>
         <translation>对数坐标(&amp;G)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="315"/>
+        <location filename="../../ui/main_window.py" line="322"/>
         <source>&amp;Legend</source>
         <translation>图例(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="318"/>
+        <location filename="../../ui/main_window.py" line="325"/>
         <source>&amp;Grid</source>
         <translation>网格(&amp;G)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="324"/>
+        <location filename="../../ui/main_window.py" line="331"/>
         <source>&amp;Light</source>
         <translation>浅色(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="325"/>
+        <location filename="../../ui/main_window.py" line="332"/>
         <source>&amp;Dark</source>
         <translation>深色(&amp;D)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="333"/>
+        <location filename="../../ui/main_window.py" line="340"/>
         <source>&amp;Preferences…</source>
         <translation>首选项(&amp;P)…</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="336"/>
+        <location filename="../../ui/main_window.py" line="343"/>
         <source>&amp;About</source>
         <translation>关于(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="340"/>
+        <location filename="../../ui/main_window.py" line="347"/>
         <source>&amp;File</source>
         <translation>文件(&amp;F)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="347"/>
+        <location filename="../../ui/main_window.py" line="354"/>
         <source>&amp;Export</source>
         <translation>导出(&amp;E)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="354"/>
+        <location filename="../../ui/main_window.py" line="362"/>
         <source>&amp;Analysis</source>
         <translation>分析(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="362"/>
+        <location filename="../../ui/main_window.py" line="370"/>
         <source>&amp;View</source>
         <translation>视图(&amp;V)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="368"/>
+        <location filename="../../ui/main_window.py" line="376"/>
         <source>&amp;Theme</source>
         <translation>主题(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="374"/>
+        <location filename="../../ui/main_window.py" line="382"/>
         <source>&amp;Tools</source>
         <translation>工具(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="377"/>
+        <location filename="../../ui/main_window.py" line="385"/>
         <source>&amp;Help</source>
         <translation>帮助(&amp;H)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="381"/>
+        <location filename="../../ui/main_window.py" line="389"/>
         <source>Main</source>
         <translation>主工具栏</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="405"/>
+        <location filename="../../ui/main_window.py" line="413"/>
         <source>Define a material window</source>
         <translation>定义材料窗口</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="407"/>
+        <location filename="../../ui/main_window.py" line="415"/>
         <source>{name} has no scientifically valid universal range. Enter its minimum and maximum wavelength before selecting it.</source>
         <translation>{name} 没有科学上有效的通用波长范围。请先输入最小和最大波长，再选择该材料。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="422"/>
+        <location filename="../../ui/main_window.py" line="430"/>
         <source>Open PL spectra</source>
         <translation>打开 PL 光谱</translation>
     </message>
@@ -647,38 +652,42 @@
         <translation type="vanished">PL 数据 (*.csv *.xlsx *.xls *.xlsm);;CSV (*.csv);;Excel (*.xlsx *.xls *.xlsm);;所有文件 (*)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="425"/>
         <source>PL data (*.opj *.opju *.csv *.xlsx *.xls *.xlsm);;Origin Project (*.opj *.opju);;CSV (*.csv);;Excel (*.xlsx *.xls *.xlsm);;All files (*)</source>
-        <translation>PL 数据 (*.opj *.opju *.csv *.xlsx *.xls *.xlsm);;Origin 工程 (*.opj *.opju);;CSV (*.csv);;Excel (*.xlsx *.xls *.xlsm);;所有文件 (*)</translation>
+        <translation type="vanished">PL 数据 (*.opj *.opju *.csv *.xlsx *.xls *.xlsm);;Origin 工程 (*.opj *.opju);;CSV (*.csv);;Excel (*.xlsx *.xls *.xlsm);;所有文件 (*)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="438"/>
+        <location filename="../../ui/main_window.py" line="433"/>
+        <source>PL data (*.dat *.opj *.opju *.csv *.xlsx *.xls *.xlsm);;Instrument DAT (*.dat);;Origin Project (*.opj *.opju);;CSV (*.csv);;Excel (*.xlsx *.xls *.xlsm);;All files (*)</source>
+        <translation>PL 数据 (*.dat *.opj *.opju *.csv *.xlsx *.xls *.xlsm);;仪器 DAT (*.dat);;Origin 工程 (*.opj *.opju);;CSV (*.csv);;Excel (*.xlsx *.xls *.xlsm);;所有文件 (*)</translation>
+    </message>
+    <message>
         <location filename="../../ui/main_window.py" line="447"/>
+        <location filename="../../ui/main_window.py" line="456"/>
         <source>Peak Search</source>
         <translation>寻峰</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="439"/>
+        <location filename="../../ui/main_window.py" line="448"/>
         <source>No visible spectra to analyze.</source>
         <translation>没有可见光谱可供分析。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="448"/>
+        <location filename="../../ui/main_window.py" line="457"/>
         <source>Select at least one material with a valid wavelength window.</source>
         <translation>请至少选择一种具有有效波长窗口的材料。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="488"/>
+        <location filename="../../ui/main_window.py" line="497"/>
         <source>Raw peak analysis completed: {peak_count} unique peak(s); windows: {range_summary}.</source>
         <translation>原始峰分析完成：检测到 {peak_count} 个唯一峰；窗口：{range_summary}。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="497"/>
+        <location filename="../../ui/main_window.py" line="506"/>
         <source>Found {peak_count} unique raw peak(s) in {sample_count} sample(s) across {window_count} material window(s).</source>
         <translation>在 {sample_count} 个样品的 {window_count} 个材料窗口中找到 {peak_count} 个唯一原始峰。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="505"/>
+        <location filename="../../ui/main_window.py" line="514"/>
         <source>
 
 {count} sample(s) were skipped; see Log.</source>
@@ -687,38 +696,38 @@
 跳过了 {count} 个样品；详情见日志。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="510"/>
+        <location filename="../../ui/main_window.py" line="519"/>
         <source>Peak Search complete</source>
         <translation>寻峰完成</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="522"/>
         <location filename="../../ui/main_window.py" line="531"/>
+        <location filename="../../ui/main_window.py" line="540"/>
         <source>Model Fit</source>
         <translation>模型拟合</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="523"/>
+        <location filename="../../ui/main_window.py" line="532"/>
         <source>No visible spectra to fit.</source>
         <translation>没有可见光谱可供拟合。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="533"/>
+        <location filename="../../ui/main_window.py" line="542"/>
         <source>Select at least one material with a valid wavelength window on the Raw Peak tab.</source>
         <translation>请在“原始峰”选项卡中至少选择一种具有有效波长窗口的材料。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="587"/>
+        <location filename="../../ui/main_window.py" line="596"/>
         <source>Model fitting completed: {fit_count} successful window fit(s), {peak_count} fitted peak(s), {skipped_count} skipped.</source>
         <translation>模型拟合完成：{fit_count} 个窗口拟合成功，得到 {peak_count} 个拟合峰，跳过 {skipped_count} 个。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="597"/>
+        <location filename="../../ui/main_window.py" line="606"/>
         <source>Completed {fit_count} material-window fit(s) with {peak_count} fitted peak(s).</source>
         <translation>已完成 {fit_count} 个材料窗口的拟合，得到 {peak_count} 个拟合峰。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="603"/>
+        <location filename="../../ui/main_window.py" line="612"/>
         <source>
 
 {count} window fit(s) were skipped; see Log.</source>
@@ -727,207 +736,244 @@
 跳过了 {count} 个窗口拟合；详情见日志。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="608"/>
+        <location filename="../../ui/main_window.py" line="617"/>
         <source>Model Fit complete</source>
         <translation>模型拟合完成</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="626"/>
+        <location filename="../../ui/main_window.py" line="635"/>
         <source>Removed {count} sample(s).</source>
         <translation>已删除 {count} 个样品。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="681"/>
+        <location filename="../../ui/main_window.py" line="690"/>
         <source>Analysis preferences updated.</source>
         <translation>分析首选项已更新。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="711"/>
+        <location filename="../../ui/main_window.py" line="720"/>
         <source>Created a new project.</source>
         <translation>已新建工程。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="718"/>
+        <location filename="../../ui/main_window.py" line="727"/>
         <source>Open PL Analyzer Pro project</source>
         <translation>打开 PL Analyzer Pro 工程</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="720"/>
-        <location filename="../../ui/main_window.py" line="745"/>
+        <location filename="../../ui/main_window.py" line="729"/>
+        <location filename="../../ui/main_window.py" line="754"/>
         <source>PL Analyzer Pro project (*.plproj)</source>
         <translation>PL Analyzer Pro 工程 (*.plproj)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="730"/>
+        <location filename="../../ui/main_window.py" line="739"/>
         <source>Project opened: {path}</source>
         <translation>工程已打开：{path}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="733"/>
+        <location filename="../../ui/main_window.py" line="742"/>
         <source>Open project failed</source>
         <translation>打开工程失败</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="743"/>
+        <location filename="../../ui/main_window.py" line="752"/>
         <source>Save PL Analyzer Pro project</source>
         <translation>保存 PL Analyzer Pro 工程</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="762"/>
+        <location filename="../../ui/main_window.py" line="771"/>
         <source>Project saved: {path}</source>
         <translation>工程已保存：{path}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="765"/>
+        <location filename="../../ui/main_window.py" line="774"/>
         <source>Saved {filename}</source>
         <translation>已保存 {filename}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="770"/>
+        <location filename="../../ui/main_window.py" line="779"/>
         <source>Save project failed</source>
         <translation>保存工程失败</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="827"/>
+        <location filename="../../ui/main_window.py" line="836"/>
         <source>Ignored {count} orphaned fit spectrum reference(s).</source>
         <translation>已忽略 {count} 个无对应样品的拟合光谱引用。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="835"/>
+        <location filename="../../ui/main_window.py" line="844"/>
         <source>[{code}] Stored fit results were not restored: {error}</source>
         <translation>[{code}] 未恢复已存储的拟合结果：{error}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="877"/>
+        <location filename="../../ui/main_window.py" line="886"/>
         <source>Stored Raw Peak preferences were invalid and were ignored.</source>
         <translation>已存储的原始峰首选项无效，已忽略。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="889"/>
+        <location filename="../../ui/main_window.py" line="898"/>
         <source>Stored Raw Peak preferences were outside valid limits and were ignored.</source>
         <translation>已存储的原始峰首选项超出有效范围，已忽略。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="909"/>
+        <location filename="../../ui/main_window.py" line="918"/>
         <source>Unsaved project changes</source>
         <translation>工程有未保存的更改</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="910"/>
+        <location filename="../../ui/main_window.py" line="919"/>
         <source>Save changes to the current project?</source>
         <translation>是否保存当前工程的更改？</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="924"/>
+        <location filename="../../ui/main_window.py" line="933"/>
         <source>Untitled</source>
         <translation>未命名</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="927"/>
+        <location filename="../../ui/main_window.py" line="936"/>
         <source>{marker}{name} — PL Analyzer Pro v{version}</source>
         <translation>{marker}{name} — PL Analyzer Pro v{version}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="938"/>
+        <location filename="../../ui/main_window.py" line="947"/>
         <source>Copy Peak Table</source>
         <translation>复制峰表</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="939"/>
+        <location filename="../../ui/main_window.py" line="948"/>
         <source>There are no results to copy.</source>
         <translation>没有可复制的结果。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="945"/>
+        <location filename="../../ui/main_window.py" line="954"/>
         <source>Peak table copied to the clipboard.</source>
         <translation>峰表已复制到剪贴板。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="951"/>
+        <location filename="../../ui/main_window.py" line="960"/>
         <source>Export peak table</source>
         <translation>导出峰表</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="953"/>
-        <location filename="../../ui/main_window.py" line="992"/>
+        <location filename="../../ui/main_window.py" line="962"/>
+        <location filename="../../ui/main_window.py" line="1001"/>
         <source>Excel workbook (*.xlsx);;CSV (*.csv)</source>
         <translation>Excel 工作簿 (*.xlsx);;CSV (*.csv)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="964"/>
+        <location filename="../../ui/main_window.py" line="973"/>
         <source>Peak table exported: {path}</source>
         <translation>峰表已导出：{path}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="967"/>
-        <location filename="../../ui/main_window.py" line="1006"/>
-        <location filename="../../ui/main_window.py" line="1045"/>
+        <location filename="../../ui/main_window.py" line="976"/>
+        <location filename="../../ui/main_window.py" line="1015"/>
+        <location filename="../../ui/main_window.py" line="1054"/>
+        <location filename="../../ui/main_window.py" line="1116"/>
         <source>Exported {filename}</source>
         <translation>已导出 {filename}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="971"/>
+        <location filename="../../ui/main_window.py" line="980"/>
         <source>Peak table export failed</source>
         <translation>峰表导出失败</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="977"/>
+        <location filename="../../ui/main_window.py" line="986"/>
         <source>Copy Fit Table</source>
         <translation>复制拟合表</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="978"/>
+        <location filename="../../ui/main_window.py" line="987"/>
         <source>There are no fit results to copy.</source>
         <translation>没有可复制的拟合结果。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="984"/>
+        <location filename="../../ui/main_window.py" line="993"/>
         <source>Fit table copied to the clipboard.</source>
         <translation>拟合表已复制到剪贴板。</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="990"/>
+        <location filename="../../ui/main_window.py" line="999"/>
         <source>Export fit table</source>
         <translation>导出拟合表</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="1003"/>
+        <location filename="../../ui/main_window.py" line="1012"/>
         <source>Fit table exported: {path}</source>
         <translation>拟合表已导出：{path}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="1010"/>
+        <location filename="../../ui/main_window.py" line="1019"/>
         <source>Fit table export failed</source>
         <translation>拟合表导出失败</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="1015"/>
+        <location filename="../../ui/main_window.py" line="1024"/>
         <source>Export plot</source>
         <translation>导出图形</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="1017"/>
+        <location filename="../../ui/main_window.py" line="1026"/>
         <source>PNG image (*.png);;SVG vector (*.svg);;PDF document (*.pdf)</source>
         <translation>PNG 图像 (*.png);;SVG 矢量图 (*.svg);;PDF 文档 (*.pdf)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="1031"/>
-        <location filename="../../ui/main_window.py" line="1049"/>
+        <location filename="../../ui/main_window.py" line="1040"/>
+        <location filename="../../ui/main_window.py" line="1058"/>
         <source>Plot export failed</source>
         <translation>图形导出失败</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="1033"/>
+        <location filename="../../ui/main_window.py" line="1042"/>
         <source>Unsupported plot format: {suffix}</source>
         <translation>不支持的图形格式：{suffix}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="1042"/>
+        <location filename="../../ui/main_window.py" line="1051"/>
         <source>Plot exported: {path}</source>
         <translation>图形已导出：{path}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="1064"/>
+        <location filename="../../ui/main_window.py" line="1065"/>
+        <location filename="../../ui/main_window.py" line="1074"/>
+        <source>Export reference-style PNG</source>
+        <translation>导出参考样式 PNG</translation>
+    </message>
+    <message>
+        <location filename="../../ui/main_window.py" line="1067"/>
+        <source>Make exactly one spectrum visible before exporting a reference-style PNG.</source>
+        <translation>导出参考样式 PNG 前，请仅保留一条光谱可见。</translation>
+    </message>
+    <message>
+        <location filename="../../ui/main_window.py" line="1076"/>
+        <source>PNG image (*.png)</source>
+        <translation>PNG 图像 (*.png)</translation>
+    </message>
+    <message>
+        <location filename="../../ui/main_window.py" line="1086"/>
+        <source>Export analysis sidecars</source>
+        <translation>导出配套分析文件</translation>
+    </message>
+    <message>
+        <location filename="../../ui/main_window.py" line="1088"/>
+        <source>Also export presentation metrics as JSON and processed plotting data as CSV?</source>
+        <translation>是否同时将展示指标导出为 JSON，并将处理后的绘图数据导出为 CSV？</translation>
+    </message>
+    <message>
+        <location filename="../../ui/main_window.py" line="1107"/>
+        <source>Reference-style PNG exported: {path}; peak {peak:.1f} nm; presentation FWHM {fwhm:.1f} nm.</source>
+        <translation>已导出参考样式 PNG：{path}；峰位 {peak:.1f} nm；展示半高宽 {fwhm:.1f} nm。</translation>
+    </message>
+    <message>
+        <location filename="../../ui/main_window.py" line="1120"/>
+        <source>Reference-style plot export failed</source>
+        <translation>参考样式图导出失败</translation>
+    </message>
+    <message>
+        <location filename="../../ui/main_window.py" line="1135"/>
         <source>
 
 Details: {detail}</source>
@@ -936,12 +982,12 @@ Details: {detail}</source>
 详细信息：{detail}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="1070"/>
+        <location filename="../../ui/main_window.py" line="1141"/>
         <source>About PL Analyzer Pro</source>
         <translation>关于 PL Analyzer Pro</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="1072"/>
+        <location filename="../../ui/main_window.py" line="1143"/>
         <source>&lt;b&gt;PL Analyzer Pro v{version}&lt;/b&gt;&lt;br&gt;&lt;br&gt;Desktop photoluminescence analysis for III–V semiconductor research.&lt;br&gt;Includes material-labelled Raw Peak analysis and model-based spectral fitting.&lt;br&gt;&lt;br&gt;Native OPJ/OPJU import includes the Apache-2.0 licensed quantized Origin worksheet reader.</source>
         <translation>&lt;b&gt;PL Analyzer Pro v{version}&lt;/b&gt;&lt;br&gt;&lt;br&gt;面向 III–V 族半导体研究的桌面光致发光分析软件。&lt;br&gt;支持带材料标注的原始峰分析和基于模型的光谱拟合。&lt;br&gt;&lt;br&gt;原生 OPJ/OPJU 导入包含采用 Apache-2.0 许可证的 quantized Origin 工作表读取器。</translation>
     </message>
@@ -1113,12 +1159,16 @@ Details: {detail}</source>
 <context>
     <name>SampleListModel</name>
     <message>
-        <location filename="../../ui/sample_panel.py" line="53"/>
         <source>CSV</source>
-        <translation>CSV</translation>
+        <translation type="vanished">CSV</translation>
     </message>
     <message>
         <location filename="../../ui/sample_panel.py" line="55"/>
+        <source>Data</source>
+        <translation>数据</translation>
+    </message>
+    <message>
+        <location filename="../../ui/sample_panel.py" line="58"/>
         <source>{file_path}
 Sheet: {sheet}
 Columns: {wavelength_column} / {intensity_column}</source>
@@ -1134,17 +1184,21 @@ Columns: {wavelength_column} / {intensity_column}</source>
         <translation type="vanished">将 CSV/XLSX/XLS 文件拖放到此处，或使用“文件 → 打开数据”。</translation>
     </message>
     <message>
-        <location filename="../../ui/sample_panel.py" line="115"/>
         <source>Drop OPJ/OPJU/CSV/XLSX/XLS files here or use File → Open.</source>
-        <translation>将 OPJ/OPJU/CSV/XLSX/XLS 文件拖放到此处，或使用“文件 → 打开数据”。</translation>
+        <translation type="vanished">将 OPJ/OPJU/CSV/XLSX/XLS 文件拖放到此处，或使用“文件 → 打开数据”。</translation>
     </message>
     <message>
-        <location filename="../../ui/sample_panel.py" line="121"/>
+        <location filename="../../ui/sample_panel.py" line="118"/>
+        <source>Drop DAT/OPJ/OPJU/CSV/XLSX/XLS files here or use File → Open.</source>
+        <translation>将 DAT/OPJ/OPJU/CSV/XLSX/XLS 文件拖放到此处，或使用“文件 → 打开数据”。</translation>
+    </message>
+    <message>
+        <location filename="../../ui/sample_panel.py" line="124"/>
         <source>Remove selected</source>
         <translation>删除所选项</translation>
     </message>
     <message>
-        <location filename="../../ui/sample_panel.py" line="129"/>
+        <location filename="../../ui/sample_panel.py" line="132"/>
         <source>Samples</source>
         <translation>样品</translation>
     </message>
