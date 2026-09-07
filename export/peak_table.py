@@ -24,6 +24,8 @@ class PeakTableExporter:
         "Height (a.u.)",
         "FWHM (nm)",
         "Prominence (a.u.)",
+        "Reference Height (a.u.)",
+        "Height vs Reference (%)",
         "Quality Flags",
     )
 
@@ -70,7 +72,7 @@ class PeakTableExporter:
                 cell.fill = PatternFill("solid", fgColor="24527A")
             worksheet.freeze_panes = "A2"
             worksheet.auto_filter.ref = worksheet.dimensions
-            widths = (24, 22, 9, 16, 18, 14, 20, 28)
+            widths = (24, 22, 9, 16, 18, 14, 20, 20, 18, 28)
             for column_index, width in enumerate(widths, start=1):
                 worksheet.column_dimensions[
                     worksheet.cell(row=1, column=column_index).column_letter
@@ -115,6 +117,8 @@ def _record_values(record: PeakTableRecord) -> tuple[object, ...]:
         record.height_au,
         record.fwhm_nm,
         record.prominence_au,
+        record.reference_height_au,
+        record.reference_height_percent,
         ", ".join(record.quality_flags),
     )
 

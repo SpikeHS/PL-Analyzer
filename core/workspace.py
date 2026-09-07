@@ -35,6 +35,7 @@ class Workspace:
         self.plot_settings = plot_settings
         self._spectra: list[SpectrumSeries] = []
         self._material_peak_results: dict[str, tuple[MaterialPeakAnalysis, ...]] = {}
+        self.reference_spectrum_id: str | None = None
 
     @property
     def spectra(self) -> tuple[SpectrumSeries, ...]:
@@ -103,6 +104,8 @@ class Workspace:
         ]
         for spectrum_id in identifiers:
             self._material_peak_results.pop(spectrum_id, None)
+        if self.reference_spectrum_id in identifiers:
+            self.reference_spectrum_id = None
 
     def set_visibility(self, spectrum_id: str, visible: bool) -> None:
         """Update one sample's display visibility."""
@@ -158,6 +161,16 @@ class Workspace:
     def peak_table_records(self, *, visible_only: bool = True) -> tuple[PeakTableRecord, ...]:
         """Flatten current results in sample and wavelength order."""
 
+        valid_spectrum_ids = {spectrum.spectrum_id for spectrum in self._spectra}
+        reference_id = self.reference_spectrum_id
+        reference_spectrum = (
+            self._find(reference_id)
+            if reference_id is not None and reference_id in valid_spectrum_ids
+            else None
+        )
+        reference_peaks = _reference_peaks_by_position(
+            self._material_peak_results.get(reference_id, ())
+        )
         records: list[PeakTableRecord] = []
         for spectrum in self._spectra:
             if visible_only and not spectrum.display.visible:
@@ -172,6 +185,9 @@ class Workspace:
                     quality_flags = tuple(
                         dict.fromkeys((*quality_flags, "AMBIGUOUS_MATERIAL_ASSIGNMENT"))
                     )
+                reference_peak: PeakResult | None = None
+                if reference_spectrum is not None and spectrum.spectrum_id != reference_id:
+                    reference_peak = _match_reference_peak(peak.position_nm, reference_peaks)
                 records.append(
                     PeakTableRecord(
                         sample_name=spectrum.name,
@@ -182,6 +198,13 @@ class Workspace:
                         fwhm_nm=peak.fwhm_nm,
                         prominence_au=peak.prominence_au,
                         quality_flags=quality_flags,
+                        reference_name=reference_spectrum.name if reference_peak else "",
+                        reference_height_au=(reference_peak.height_au if reference_peak else None),
+                        reference_height_percent=(
+                            peak.height_au / reference_peak.height_au * 100.0
+                            if reference_peak and reference_peak.height_au != 0
+                            else None
+                        ),
                     )
                 )
         return tuple(records)
@@ -228,3 +251,21 @@ def _group_peaks_by_material(
                 existing[1].append(analysis.window.material_name)
     grouped.sort(key=lambda item: item[0].position_nm)
     return tuple((peak, tuple(names)) for peak, names in grouped)
+
+
+def _reference_peaks_by_position(
+    analyses: tuple[MaterialPeakAnalysis, ...],
+) -> tuple[PeakResult, ...]:
+    return _unique_peaks(peak for analysis in analyses for peak in analysis.result.peaks)
+
+
+def _match_reference_peak(
+    position_nm: float,
+    reference_peaks: tuple[PeakResult, ...],
+) -> PeakResult | None:
+    if not reference_peaks:
+        return None
+    nearest = min(reference_peaks, key=lambda peak: abs(peak.position_nm - position_nm))
+    if abs(nearest.position_nm - position_nm) <= 2.0:
+        return nearest
+    return None

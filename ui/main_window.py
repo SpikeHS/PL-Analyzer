@@ -409,6 +409,7 @@ class MainWindow(QMainWindow):
                 ).format(name=name),
             )
         )
+        self._peak_panel.reference_changed.connect(self._set_reference_spectrum)
         self._peak_panel.settings_changed.connect(lambda: self._set_dirty(True))
         self._layer_editor.layers_changed.connect(self._on_layers_changed)
         self._fit_panel.fit_requested.connect(lambda: self._run_fit(show_summary=True))
@@ -627,6 +628,7 @@ class MainWindow(QMainWindow):
         )
 
     def _refresh_views(self) -> None:
+        self._peak_panel.set_reference_spectra(self._workspace.spectra)
         self._plot_widget.render(
             self._workspace.spectra,
             self._workspace.peak_results,
@@ -635,6 +637,15 @@ class MainWindow(QMainWindow):
         )
         self._peak_panel.set_records(self._workspace.peak_table_records())
         self._fit_panel.set_records(self._fit_store.table_records())
+
+    def _set_reference_spectrum(self) -> None:
+        reference_id = self._peak_panel.reference_spectrum_id
+        if reference_id == self._workspace.reference_spectrum_id:
+            return
+        self._workspace.reference_spectrum_id = reference_id
+        records = self._workspace.peak_table_records()
+        self._peak_panel.set_records(records)
+        self._set_dirty(True)
 
     def _set_amplitude_mode(self, mode: AmplitudeMode) -> None:
         self._workspace.plot_settings.amplitude_mode = mode
@@ -793,6 +804,7 @@ class MainWindow(QMainWindow):
             "max_peaks": self._analysis_defaults.max_peaks,
             "gap_factor": self._analysis_defaults.gap_factor,
         }
+        self._project.extensions["reference_spectrum_id"] = self._workspace.reference_spectrum_id
         self._project.validate()
 
     def _apply_loaded_project(self, project: PLProject, path: Path) -> None:
@@ -842,6 +854,13 @@ class MainWindow(QMainWindow):
         raw_peak_preferences = project.extensions.get("raw_peak_preferences")
         if isinstance(raw_peak_preferences, Mapping):
             self._restore_analysis_defaults(raw_peak_preferences)
+        reference_id = project.extensions.get("reference_spectrum_id")
+        self._workspace.reference_spectrum_id = (
+            str(reference_id)
+            if isinstance(reference_id, str)
+            and reference_id in {spectrum.spectrum_id for spectrum in self._workspace.spectra}
+            else None
+        )
         self._sync_plot_actions()
         saved_theme = project.extensions.get("theme")
         if isinstance(saved_theme, str):

@@ -123,6 +123,41 @@ function Set-ProcessEnvironmentValue {
     )
 }
 
+function Invoke-PyInstallerWithCleanPath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$PythonPath,
+
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments
+    )
+
+    $previousPath = $env:PATH
+    $pythonDirectory = Split-Path -Parent $PythonPath
+    $projectDirectory = Split-Path -Parent $pythonDirectory
+    $cleanPathDirectories = @(
+        $pythonDirectory,
+        $projectDirectory,
+        (Join-Path $env:SystemRoot "System32"),
+        $env:SystemRoot,
+        (Join-Path $env:SystemRoot "System32\Wbem"),
+        (Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0")
+    ) | Select-Object -Unique
+    $cleanPath = [string]::Join(
+        [System.IO.Path]::PathSeparator,
+        [string[]]$cleanPathDirectories
+    )
+
+    try {
+        # Keep dependency discovery away from host-agent runtime DLL caches.
+        $env:PATH = $cleanPath
+        & $PythonPath -m PyInstaller @Arguments
+    }
+    finally {
+        $env:PATH = $previousPath
+    }
+}
+
 function Invoke-ExecutableSmokeTest {
     param(
         [Parameter(Mandatory = $true)]
@@ -225,6 +260,81 @@ function Write-ThirdPartyNotices {
     Assert-RequiredFile -Path $OutputPath -Description "Third-party notices release asset"
 }
 
+function Assert-ReleaseBundle {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$DistributionDirectory,
+
+        [Parameter(Mandatory = $true)]
+        [string[]]$ExpectedAssetPaths,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ManifestPath
+    )
+
+    $expectedNames = @(
+        $ExpectedAssetPaths + @($ManifestPath) |
+            ForEach-Object { Split-Path -Leaf $_ } |
+            Sort-Object
+    )
+    $actualNames = @(
+        Get-ChildItem -LiteralPath $DistributionDirectory -File |
+            ForEach-Object { $_.Name } |
+            Sort-Object
+    )
+    if (($actualNames -join "`n") -ne ($expectedNames -join "`n")) {
+        throw (
+            "Release bundle mismatch. Expected: {0}; found: {1}." -f
+            ($expectedNames -join ", "),
+            ($actualNames -join ", ")
+        )
+    }
+
+    $manifestLines = @(
+        [System.IO.File]::ReadAllLines($ManifestPath) |
+            Where-Object { $_.Length -gt 0 }
+    )
+    if ($manifestLines.Count -ne $ExpectedAssetPaths.Count) {
+        throw (
+            "SHA-256 manifest must contain exactly {0} entries; found {1}." -f
+            $ExpectedAssetPaths.Count,
+            $manifestLines.Count
+        )
+    }
+
+    $manifestEntries = @{}
+    foreach ($manifestLine in $manifestLines) {
+        $manifestParts = $manifestLine -split "\s+", 2
+        if ($manifestParts.Count -ne 2) {
+            throw "Malformed SHA-256 manifest entry: $manifestLine"
+        }
+        $manifestAssetName = $manifestParts[1].Trim()
+        if ($manifestEntries.ContainsKey($manifestAssetName)) {
+            throw "SHA-256 manifest contains a duplicate entry for $manifestAssetName."
+        }
+        $manifestEntries[$manifestAssetName] = $manifestParts[0]
+    }
+
+    foreach ($assetPath in $ExpectedAssetPaths) {
+        $assetName = Split-Path -Leaf $assetPath
+        if (-not $manifestEntries.ContainsKey($assetName)) {
+            throw "SHA-256 manifest is missing an entry for $assetName."
+        }
+
+        $actualHash = (
+            Get-FileHash -LiteralPath $assetPath -Algorithm SHA256
+        ).Hash.ToUpperInvariant()
+        if ($actualHash -ne $manifestEntries[$assetName]) {
+            throw (
+                "SHA-256 mismatch for {0}: expected {1}, found {2}." -f
+                $assetName,
+                $manifestEntries[$assetName],
+                $actualHash
+            )
+        }
+    }
+}
+
 $projectRoot = Get-NormalizedPath -Path $PSScriptRoot
 $pythonPath = Join-Path $projectRoot ".venv\Scripts\python.exe"
 $specPath = Join-Path $projectRoot "PLAnalyzerPro.spec"
@@ -323,12 +433,17 @@ try {
             -Name $buildLanguageVariableName `
             -Value $buildLanguage
         Write-Host "Building $buildLanguage..."
-        & $pythonPath -m PyInstaller `
-            --noconfirm `
-            --clean `
-            --distpath $distDirectory `
-            --workpath $localeWorkDirectory `
-            $specPath
+        Invoke-PyInstallerWithCleanPath `
+            -PythonPath $pythonPath `
+            -Arguments @(
+                "--noconfirm",
+                "--clean",
+                "--distpath",
+                $distDirectory,
+                "--workpath",
+                $localeWorkDirectory,
+                $specPath
+            )
         Assert-LastCommandSucceeded -Description "$buildLanguage PyInstaller build"
 
         $artifactName = (
@@ -392,6 +507,10 @@ try {
         $utf8WithoutBom
     )
     Assert-RequiredFile -Path $manifestPath -Description "SHA-256 manifest"
+    Assert-ReleaseBundle `
+        -DistributionDirectory $distDirectory `
+        -ExpectedAssetPaths $releaseAssetPaths `
+        -ManifestPath $manifestPath
 
     Write-Host ""
     Write-Host "Release build completed."

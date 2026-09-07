@@ -218,3 +218,71 @@ def test_overlapping_windows_deduplicate_peak_and_keep_all_material_labels() -> 
         "Overlapping candidate",
     )
     assert "AMBIGUOUS_MATERIAL_ASSIGNMENT" in records[0].quality_flags
+
+
+def test_reference_peak_match_reports_height_percent(qapp: object) -> None:
+    """Reference rows use a nearby peak height as an intuitive percentage."""
+
+    wavelength_nm = np.linspace(840.0, 920.0, 321)
+
+    def spectrum(spectrum_id: str, name: str, height: float) -> SpectrumSeries:
+        return SpectrumSeries(
+            spectrum_id=spectrum_id,
+            name=name,
+            wavelength_nm=wavelength_nm,
+            intensity_au=2.0
+            + height * np.exp(-4.0 * np.log(2.0) * ((wavelength_nm - 875.0) / 6.0) ** 2),
+            source=SourceInfo(
+                file_path=f"C:/data/{spectrum_id}.csv",
+                sheet_name=None,
+                wavelength_column="Wavelength",
+                intensity_column="Intensity",
+            ),
+        )
+
+    sample = spectrum("sample", "Sample", 80.0)
+    reference = spectrum("reference", "Reference", 100.0)
+    analyzer = RawPeakAnalyzer()
+    analysis = analyzer.analyze_spectrum(
+        sample,
+        RawPeakConfig(
+            search_min_nm=860.0,
+            search_max_nm=890.0,
+            relative_prominence=0.01,
+            noise_sigma_factor=0.0,
+        ),
+    )
+    reference_analysis = analyzer.analyze_spectrum(
+        reference,
+        RawPeakConfig(
+            search_min_nm=860.0,
+            search_max_nm=890.0,
+            relative_prominence=0.01,
+            noise_sigma_factor=0.0,
+        ),
+    )
+    window = MaterialSearchWindow(
+        material_id="gaas_candidate",
+        material_name="GaAs candidate",
+        min_nm=860.0,
+        max_nm=890.0,
+    )
+    workspace = Workspace(PlotDisplaySettings())
+    workspace.add_spectra([sample, reference])
+    workspace.set_material_peak_results(
+        {
+            sample.spectrum_id: (MaterialPeakAnalysis(window=window, result=analysis),),
+            reference.spectrum_id: (
+                MaterialPeakAnalysis(window=window, result=reference_analysis),
+            ),
+        }
+    )
+    workspace.reference_spectrum_id = reference.spectrum_id
+
+    records = workspace.peak_table_records()
+
+    assert len(records) == 2
+    sample_record = records[0]
+    assert sample_record.reference_name == "Reference"
+    assert sample_record.reference_height_au == pytest.approx(reference_analysis.peaks[0].height_au)
+    assert sample_record.reference_height_percent == pytest.approx(80.3921568627)

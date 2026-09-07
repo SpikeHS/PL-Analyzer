@@ -33,6 +33,19 @@ def test_exact_sampled_peak_and_fwhm() -> None:
     assert peak.fwhm_nm == pytest.approx(4 / 3)
 
 
+def test_single_sample_spike_is_rejected() -> None:
+    wavelength = np.linspace(0, 10, 101)
+    intensity = np.full_like(wavelength, 1.0)
+    intensity += 20.0 * np.exp(-4.0 * np.log(2.0) * ((wavelength - 5.0) / 1.0) ** 2)
+    intensity[40] += 100.0
+
+    result = RawPeakAnalyzer().analyze(wavelength, intensity, _config())
+
+    assert len(result.peaks) == 1
+    assert result.peaks[0].position_nm == pytest.approx(5.0)
+    assert result.algorithm_version == 2
+
+
 def test_fwhm_is_interpolated_on_irregular_wavelength_axis() -> None:
     result = RawPeakAnalyzer().analyze(
         [0, 0.2, 1, 4, 10],

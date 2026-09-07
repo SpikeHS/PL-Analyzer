@@ -149,3 +149,6 @@ class PeakTableRecord:
     fwhm_nm: float | None
     prominence_au: float
     quality_flags: tuple[str, ...]
+    reference_name: str = ""
+    reference_height_au: float | None = None
+    reference_height_percent: float | None = None

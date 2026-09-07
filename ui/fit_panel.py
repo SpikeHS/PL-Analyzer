@@ -231,14 +231,18 @@ class FitPanel(QWidget):
         self._savgol_polyorder.setValue(3)
         self._savgol_window.valueChanged.connect(self._update_savgol_polyorder_limit)
 
-        self._model_combo.currentIndexChanged.connect(self.settings_changed.emit)
-        self._baseline_combo.currentIndexChanged.connect(self.settings_changed.emit)
-        self._peak_count_combo.currentIndexChanged.connect(self.settings_changed.emit)
-        self._max_peaks.valueChanged.connect(self.settings_changed.emit)
-        self._minimum_distance.valueChanged.connect(self.settings_changed.emit)
-        self._savgol_enabled.toggled.connect(self.settings_changed.emit)
-        self._savgol_window.valueChanged.connect(self.settings_changed.emit)
-        self._savgol_polyorder.valueChanged.connect(self.settings_changed.emit)
+        self._model_combo.currentIndexChanged.connect(lambda _index: self.settings_changed.emit())
+        self._baseline_combo.currentIndexChanged.connect(
+            lambda _index: self.settings_changed.emit()
+        )
+        self._peak_count_combo.currentIndexChanged.connect(
+            lambda _index: self.settings_changed.emit()
+        )
+        self._max_peaks.valueChanged.connect(lambda _value: self.settings_changed.emit())
+        self._minimum_distance.valueChanged.connect(lambda _value: self.settings_changed.emit())
+        self._savgol_enabled.toggled.connect(lambda _checked: self.settings_changed.emit())
+        self._savgol_window.valueChanged.connect(lambda _value: self.settings_changed.emit())
+        self._savgol_polyorder.valueChanged.connect(lambda _value: self.settings_changed.emit())
 
         form = QFormLayout()
         form.addRow(self.tr("Line shape"), self._model_combo)

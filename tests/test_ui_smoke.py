@@ -55,6 +55,22 @@ def test_fit_panel_settings_round_trip(qtbot: pytest.FixtureRequest) -> None:
     assert panel.settings_snapshot() == snapshot
 
 
+def test_fit_panel_control_changes_emit_settings_signal(
+    qtbot: pytest.FixtureRequest,
+) -> None:
+    panel = FitPanel()
+    qtbot.addWidget(panel)
+
+    panel._model_combo.setCurrentIndex(1)
+    panel._baseline_combo.setCurrentIndex(1)
+    panel._peak_count_combo.setCurrentIndex(1)
+    panel._max_peaks.setValue(4)
+    panel._minimum_distance.setValue(1.25)
+    panel._savgol_enabled.setChecked(True)
+    panel._savgol_window.setValue(13)
+    panel._savgol_polyorder.setValue(2)
+
+
 def test_main_window_runs_selected_material_fits(
     qtbot: pytest.FixtureRequest,
 ) -> None:

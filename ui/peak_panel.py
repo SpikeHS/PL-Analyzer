@@ -14,6 +14,7 @@ from PySide6.QtCore import (
 )
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QComboBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -24,7 +25,7 @@ from PySide6.QtWidgets import (
 )
 
 from core.configuration import MaterialDatabase, MaterialRecord
-from core.models import MaterialSearchWindow, PeakTableRecord
+from core.models import MaterialSearchWindow, PeakTableRecord, SpectrumSeries
 from ui.qt_compat import normalize_check_state
 
 
@@ -248,6 +249,8 @@ class PeakTableModel(QAbstractTableModel):
         QT_TRANSLATE_NOOP("PeakTableModel", "Height\n(a.u.)"),
         QT_TRANSLATE_NOOP("PeakTableModel", "FWHM\n(nm)"),
         QT_TRANSLATE_NOOP("PeakTableModel", "Prominence\n(a.u.)"),
+        QT_TRANSLATE_NOOP("PeakTableModel", "Ref\nHeight (a.u.)"),
+        QT_TRANSLATE_NOOP("PeakTableModel", "Height\nvs Ref (%)"),
         QT_TRANSLATE_NOOP("PeakTableModel", "Quality"),
     )
 
@@ -300,6 +303,12 @@ class PeakTableModel(QAbstractTableModel):
             f"{record.height_au:.6g}",
             "—" if record.fwhm_nm is None else f"{record.fwhm_nm:.4f}",
             f"{record.prominence_au:.6g}",
+            "—" if record.reference_height_au is None else f"{record.reference_height_au:.6g}",
+            (
+                "—"
+                if record.reference_height_percent is None
+                else f"{record.reference_height_percent:.1f}%"
+            ),
             ", ".join(record.quality_flags),
         )
         if role == Qt.ItemDataRole.DisplayRole:
@@ -334,6 +343,12 @@ class PeakTableModel(QAbstractTableModel):
                         f"{record.height_au:.8g}",
                         "" if record.fwhm_nm is None else f"{record.fwhm_nm:.8g}",
                         f"{record.prominence_au:.8g}",
+                        ""
+                        if record.reference_height_au is None
+                        else f"{record.reference_height_au:.8g}",
+                        ""
+                        if record.reference_height_percent is None
+                        else f"{record.reference_height_percent:.8g}",
                         ", ".join(record.quality_flags),
                     )
                 )
@@ -349,6 +364,7 @@ class PeakPanel(QWidget):
     export_requested = Signal()
     invalid_window_selected = Signal(str)
     settings_changed = Signal()
+    reference_changed = Signal()
 
     def __init__(
         self,
@@ -400,6 +416,15 @@ class PeakPanel(QWidget):
         result_buttons.addWidget(export_button)
         result_buttons.addStretch(1)
 
+        self._reference_combo = QComboBox(self)
+        self._reference_combo.addItem(self.tr("None"), None)
+        self._reference_combo.currentIndexChanged.connect(
+            lambda _index: self.reference_changed.emit()
+        )
+        reference_row = QHBoxLayout()
+        reference_row.addWidget(QLabel(self.tr("Reference"), self))
+        reference_row.addWidget(self._reference_combo, 1)
+
         note = QLabel(
             self.tr(
                 "Multiple material windows can be active together. Overlapping detections "
@@ -418,6 +443,7 @@ class PeakPanel(QWidget):
         layout.addWidget(search_button)
         layout.addSpacing(8)
         layout.addWidget(QLabel(self.tr("Raw Peak Table"), self))
+        layout.addLayout(reference_row)
         layout.addWidget(self._peak_table, 1)
         layout.addLayout(result_buttons)
         layout.addWidget(note)
@@ -446,6 +472,29 @@ class PeakPanel(QWidget):
 
         self._peak_model.replace(records)
         self._peak_table.resizeColumnsToContents()
+
+    def set_reference_spectra(self, spectra: Sequence[SpectrumSeries]) -> None:
+        """Replace reference choices while preserving the selected spectrum ID."""
+
+        selected_id = self._reference_combo.currentData()
+        self._reference_combo.blockSignals(True)
+        self._reference_combo.clear()
+        self._reference_combo.addItem(self.tr("None"), None)
+        for spectrum in spectra:
+            self._reference_combo.addItem(spectrum.name, spectrum.spectrum_id)
+        restored_index = self._reference_combo.findData(selected_id)
+        if restored_index >= 0:
+            self._reference_combo.setCurrentIndex(restored_index)
+        else:
+            self._reference_combo.setCurrentIndex(0)
+        self._reference_combo.blockSignals(False)
+
+    @property
+    def reference_spectrum_id(self) -> str | None:
+        """Return the selected reference spectrum ID, if any."""
+
+        data = self._reference_combo.currentData()
+        return str(data) if data is not None else None
 
     def _copy(self) -> None:
         rows = [index.row() for index in self._peak_table.selectionModel().selectedRows()]

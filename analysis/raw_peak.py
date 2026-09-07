@@ -75,7 +75,9 @@ class RawPeakConfig:
 class RawPeakAnalyzer:
     """Measure sampled maxima and half-prominence widths without fitting."""
 
-    algorithm_version = 1
+    algorithm_version = 2
+    _MIN_SUPPORT_SAMPLES = 3
+    _SUPPORT_PROMINENCE_FRACTION = 0.8
 
     def analyze(
         self,
@@ -178,6 +180,14 @@ class RawPeakAnalyzer:
                         continue
                     if prominence < effective_prominence:
                         continue
+                    support_samples = _support_sample_count(
+                        intensity_au,
+                        peak_index,
+                        prominence,
+                        fraction=RawPeakAnalyzer._SUPPORT_PROMINENCE_FRACTION,
+                    )
+                    if support_samples < RawPeakAnalyzer._MIN_SUPPORT_SAMPLES:
+                        continue
 
                     left_nm = float(
                         np.interp(float(left_ips[result_index]), sample_axis, wavelength_nm)
@@ -240,6 +250,27 @@ class RawPeakAnalyzer:
                     )
                 )
         return candidates
+
+
+def _support_sample_count(
+    intensity_au: NDArray[np.float64],
+    peak_index: int,
+    prominence: float,
+    *,
+    fraction: float,
+) -> int:
+    """Count contiguous samples above a low fraction of the peak prominence."""
+
+    if prominence <= 0:
+        return 0
+    level = float(intensity_au[peak_index] - fraction * prominence)
+    left = peak_index
+    while left > 0 and intensity_au[left - 1] >= level:
+        left -= 1
+    right = peak_index
+    while right < intensity_au.size - 1 and intensity_au[right + 1] >= level:
+        right += 1
+    return right - left + 1
 
 
 def _prepare_arrays(
