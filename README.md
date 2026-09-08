@@ -95,43 +95,7 @@ BIC 是自动选择准则；面积、FWHM、R² 和调整 R² 是结果与质量
 
 ## 安装与运行
 
-建议使用 Python 3.12：
-
-```powershell
-cd "PL Analyzer Pro"
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --upgrade pip
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-.\.venv\Scripts\python.exe main.py
-# 简体中文界面
-.\.venv\Scripts\python.exe main_zh.py
-```
-
-运行验证：
-
-```powershell
-.\.venv\Scripts\python.exe -m pytest
-.\.venv\Scripts\python.exe -m ruff check .
-$env:QT_QPA_PLATFORM = "offscreen"
-.\.venv\Scripts\python.exe -c "from main import main"
-```
-
-生成一文件、无控制台窗口的 Windows EXE：
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File .\build_release.ps1 -Language all
-```
-
-脚本会依次执行全部测试、Ruff、受控清理、两个隔离的 PyInstaller 构建和启动 smoke test，
-并输出：
-
-- `dist\PL-Analyzer-Pro-v1.1.3-Windows-x64-en-US.exe`（英文原版）
-- `dist\PL-Analyzer-Pro-v1.1.3-Windows-x64-zh-CN.exe`（简体中文版）
-- `dist\THIRD-PARTY-NOTICES.txt`（可公开阅读的完整第三方声明）
-- `dist\SHA256SUMS.txt`
-
-`SHA256SUMS.txt` 覆盖两个 EXE 与 `THIRD-PARTY-NOTICES.txt`；它不包含自身哈希。
+从Release下载最新版本即可使用
 
 ## 使用方式
 
@@ -154,13 +118,11 @@ Raw Peak 始终读取原始线性强度。其 `FWHM` 是 SciPy prominence 基础
 不证明模型具有唯一物理机制，也不证明材料归属。低于局部采样分辨率或彼此不可分辨的峰会
 以稳定错误拒绝，不输出伪精确 FWHM/Area。
 
-v1.1 尚不包含：
+## 未来规划更新的内容
 
-- v1.2 的 AI 物理机制分析或对话 Assistant；
-- v2.0 的百文件批处理、统计和自动报告；
+- 机制分析或对话 Assistant；
+- 文件批处理、统计和自动报告；
 - 温度/激发功率序列、能量轴、仪器响应校正、反射率/DBR stopband 等高级光谱工作流；
-- Word 报告导出；
-- 代码签名、安装器，以及干净 Windows 10/11 机器上的跨机签发认证。
 
 ## 项目文档
 
