@@ -36,15 +36,6 @@ PL Analyzer Pro 是面向 MBE 与 III–V 族半导体研究的光致发光分�
 
 从 [Releases](https://github.com/SpikeHS/PL-Analyzer/releases) 下载最新版本即可使用。
 
-源码运行：
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-.\.venv\Scripts\python.exe main.py
-.\.venv\Scripts\python.exe main_zh.py
-```
-
 ## 使用流程
 
 1. 拖入数据文件，确认样品显隐。
