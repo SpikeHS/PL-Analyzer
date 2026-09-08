@@ -92,6 +92,7 @@ def test_chinese_main_window_uses_translated_presentation(
     try:
         assert window.windowTitle() == f"未命名 — PL Analyzer Pro v{__version__}"
         assert window.menuBar().actions()[0].text() == "文件(&F)"
+        assert window._export_presentation_action.text() == "导出参考样式 PNG(&R)…"
         assert (
             window._peak_panel._material_model.headerData(
                 0,

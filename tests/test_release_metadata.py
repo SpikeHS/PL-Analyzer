@@ -9,7 +9,7 @@ from pathlib import Path
 from core import __version__
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "1.1.3"
+EXPECTED_VERSION = "1.1.4"
 EXPECTED_TARGETS = {
     "en-US": ("main.py", "version_info.txt"),
     "zh-CN": ("main_zh.py", "version_info_zh_CN.txt"),
@@ -36,8 +36,8 @@ def test_windows_version_resources_match_each_release_artifact() -> None:
         resource_text = resource_path.read_text(encoding="utf-8")
         artifact_name = f"PL-Analyzer-Pro-v{EXPECTED_VERSION}-Windows-x64-{language}.exe"
 
-        assert "filevers=(1, 1, 3, 0)" in resource_text
-        assert "prodvers=(1, 1, 3, 0)" in resource_text
+        assert "filevers=(1, 1, 4, 0)" in resource_text
+        assert "prodvers=(1, 1, 4, 0)" in resource_text
         assert _string_struct_value(resource_text, "FileVersion") == EXPECTED_VERSION
         assert _string_struct_value(resource_text, "ProductVersion") == EXPECTED_VERSION
         assert _string_struct_value(resource_text, "OriginalFilename") == artifact_name
@@ -110,6 +110,30 @@ def test_v113_release_documents_disclose_origin_scope_and_license() -> None:
         "worksheet",
         "float32",
         "OPJU",
+    )
+    for marker in required_markers:
+        assert marker in combined
+
+
+def test_v114_release_documents_dat_and_presentation_metric_boundaries() -> None:
+    """The compatibility release must distinguish every FWHM contract."""
+
+    documents = (
+        PROJECT_ROOT / "README.md",
+        PROJECT_ROOT / "docs" / "architecture.md",
+        PROJECT_ROOT / "docs" / "release_v1.1.4.md",
+    )
+    combined = "\n".join(path.read_text(encoding="utf-8") for path in documents)
+
+    required_markers = (
+        "Signal − Baseline",
+        "Presentation FWHM",
+        "半 prominence",
+        "Raw Peak",
+        "模型拟合 FWHM",
+        "*_PL_metrics.json",
+        "*_PL_processed.csv",
+        "135",
     )
     for marker in required_markers:
         assert marker in combined

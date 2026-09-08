@@ -50,6 +50,7 @@ from core.project import MaterialWindowSnapshot, PLProject
 from core.workspace import Workspace
 from export.fit_table import FitTableExporter
 from export.peak_table import PeakTableExporter
+from export.presentation_plot import PresentationPlotExporter
 from plotting.plot_widget import SpectrumPlotWidget
 from ui.fit_panel import FitPanel
 from ui.layer_editor import LayerEditorWidget
@@ -84,6 +85,7 @@ class MainWindow(QMainWindow):
         self._analyzer = analyzer
         self._exporter = exporter
         self._fit_exporter = FitTableExporter()
+        self._presentation_exporter = PresentationPlotExporter()
         self._fitter = SpectrumFitter()
         self._fit_store = FitResultStore()
         self._analysis_defaults = analysis_defaults
@@ -264,6 +266,11 @@ class MainWindow(QMainWindow):
 
         self._export_plot_action = QAction(self.tr("Export &plot…"), self)
         self._export_plot_action.triggered.connect(self._export_plot)
+        self._export_presentation_action = QAction(
+            self.tr("Export &reference-style PNG…"),
+            self,
+        )
+        self._export_presentation_action.triggered.connect(self._export_presentation_plot)
         self._export_peaks_action = QAction(self.tr("Export peak &table…"), self)
         self._export_peaks_action.triggered.connect(self._export_peak_table)
         self._export_fits_action = QAction(self.tr("Export &fit table…"), self)
@@ -346,6 +353,7 @@ class MainWindow(QMainWindow):
         file_menu.addAction(self._open_action)
         export_menu = file_menu.addMenu(self.tr("&Export"))
         export_menu.addAction(self._export_plot_action)
+        export_menu.addAction(self._export_presentation_action)
         export_menu.addAction(self._export_peaks_action)
         export_menu.addAction(self._export_fits_action)
         file_menu.addSeparator()
@@ -422,7 +430,8 @@ class MainWindow(QMainWindow):
             self.tr("Open PL spectra"),
             "",
             self.tr(
-                "PL data (*.opj *.opju *.csv *.xlsx *.xls *.xlsm);;"
+                "PL data (*.dat *.opj *.opju *.csv *.xlsx *.xls *.xlsm);;"
+                "Instrument DAT (*.dat);;"
                 "Origin Project (*.opj *.opju);;CSV (*.csv);;"
                 "Excel (*.xlsx *.xls *.xlsm);;All files (*)"
             ),
@@ -1048,6 +1057,68 @@ class MainWindow(QMainWindow):
         except Exception as exc:
             self._report_exception(self.tr("Plot export failed"), exc)
 
+    def _export_presentation_plot(self) -> None:
+        spectra = self._workspace.visible_spectra()
+        if len(spectra) != 1:
+            QMessageBox.information(
+                self,
+                self.tr("Export reference-style PNG"),
+                self.tr(
+                    "Make exactly one spectrum visible before exporting a reference-style PNG."
+                ),
+            )
+            return
+        spectrum = spectra[0]
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            self.tr("Export reference-style PNG"),
+            f"{_safe_filename(spectrum.name)}_PL_spectrum.png",
+            self.tr("PNG image (*.png)"),
+        )
+        if not filename:
+            return
+        path = Path(filename)
+        if not path.suffix:
+            path = path.with_suffix(".png")
+        include_sidecars = (
+            QMessageBox.question(
+                self,
+                self.tr("Export analysis sidecars"),
+                self.tr(
+                    "Also export presentation metrics as JSON and processed plotting data as CSV?"
+                ),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            == QMessageBox.StandardButton.Yes
+        )
+        metrics_path, processed_path = _presentation_sidecar_paths(path)
+        try:
+            analysis = self._presentation_exporter.export(
+                spectrum,
+                path,
+                metrics_json_path=metrics_path if include_sidecars else None,
+                processed_csv_path=processed_path if include_sidecars else None,
+            )
+            metrics = analysis.metrics
+            self._log_panel.write(
+                "info",
+                self.tr(
+                    "Reference-style PNG exported: {path}; peak {peak:.1f} nm; "
+                    "presentation FWHM {fwhm:.1f} nm."
+                ).format(
+                    path=path,
+                    peak=metrics.peak_wavelength_nm,
+                    fwhm=metrics.presentation_fwhm_nm,
+                ),
+            )
+            self.statusBar().showMessage(
+                self.tr("Exported {filename}").format(filename=path.name),
+                5000,
+            )
+        except Exception as exc:
+            self._report_exception(self.tr("Reference-style plot export failed"), exc)
+
     def _report_exception(self, context: str, exc: BaseException) -> None:
         traceback_text = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
         self._logger.error(
@@ -1077,3 +1148,21 @@ class MainWindow(QMainWindow):
                 "quantized Origin worksheet reader."
             ).format(version=__version__),
         )
+
+
+def _safe_filename(value: str) -> str:
+    """Return a Windows-safe export stem without changing the sample name."""
+
+    forbidden = '<>:"/\\|?*'
+    translation = str.maketrans({character: "-" for character in forbidden})
+    cleaned = " ".join(value.translate(translation).split()).strip(" .-")
+    return cleaned or "PL-sample"
+
+
+def _presentation_sidecar_paths(png_path: Path) -> tuple[Path, Path]:
+    suffix = "_PL_spectrum"
+    sample_stem = png_path.stem[: -len(suffix)] if png_path.stem.endswith(suffix) else png_path.stem
+    return (
+        png_path.with_name(f"{sample_stem}_PL_metrics.json"),
+        png_path.with_name(f"{sample_stem}_PL_processed.csv"),
+    )

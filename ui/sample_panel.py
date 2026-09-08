@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from pathlib import Path
 
 from PySide6.QtCore import QAbstractListModel, QModelIndex, Qt, Signal
 from PySide6.QtGui import QColor
@@ -50,7 +51,9 @@ class SampleListModel(QAbstractListModel):
         if role == Qt.ItemDataRole.DecorationRole:
             return QColor(spectrum.display.color)
         if role == Qt.ItemDataRole.ToolTipRole:
-            sheet = spectrum.source.sheet_name or self.tr("CSV")
+            sheet = spectrum.source.sheet_name or (
+                Path(spectrum.source.file_path).suffix.lstrip(".").upper() or self.tr("Data")
+            )
             return self.tr(
                 "{file_path}\nSheet: {sheet}\nColumns: {wavelength_column} / {intensity_column}"
             ).format(
@@ -112,7 +115,7 @@ class SamplePanel(QWidget):
         self._view.setSelectionMode(QListView.SelectionMode.ExtendedSelection)
 
         import_hint = QLabel(
-            self.tr("Drop OPJ/OPJU/CSV/XLSX/XLS files here or use File → Open."),
+            self.tr("Drop DAT/OPJ/OPJU/CSV/XLSX/XLS files here or use File → Open."),
             self,
         )
         import_hint.setWordWrap(True)

@@ -72,12 +72,13 @@ NavigationToolbar 的 Python 定义文本由 `SpectrumPlotWidget` 显式翻译�
 | 范围 | 自动验证重点 |
 | --- | --- |
 | Column detector | 中英文表头、无表头数值回退、排序、重复波长合并 |
-| Import service | GB18030 CSV、多 Sheet XLSX、XLS 适配器、局部失败 |
+| Import service | 仪器 DAT 基线扣除/元数据、GB18030 CSV、多 Sheet XLSX、XLS 适配器、局部失败 |
 | Origin import | CPYA/CPYUA 签名、多 workbook/worksheet、Signal+Baseline、可检测解析失败隔离 |
 | Raw Peak | 精确峰、非等间隔 FWHM、平台峰、缺失值、边界峰、物理 nm 间距 |
 | Material configuration | schema v2、默认/扩展窗口、空窗口结构条目 |
 | Workspace/export | 唯一样品名/颜色、材料标签聚合、XLSX 结果往返 |
 | Fitting | 四种峰形、自动 BIC、双峰、联合基线、非破坏 Savitzky–Golay、稳定错误码 |
+| Presentation export | 基线半高宽语义、肩峰、真实像素尺寸、PNG/JSON/CSV 配套输出 |
 | Project persistence | 完整往返、原子保存失败保护、损坏文件、较新 schema、迁移步长 |
 | UI smoke | Qt offscreen 主窗口构造和核心依赖装配 |
 
@@ -94,6 +95,8 @@ NavigationToolbar 的 Python 定义文本由 `SpectrumPlotWidget` 显式翻译�
 - 同一 OPJ/OPJU 的多个 worksheet 均可导入，Signal+Baseline 表只增加一个样品，错误
   worksheet 不影响同批其他数据；
 - PNG/SVG/PDF、Raw Peak XLSX/CSV、Fit XLSX/CSV 均可由目标应用重新打开。
+- 仪器 DAT 导入后样品名、`Signal − Baseline`、Laser/Power/Temperature 元数据正确；仅一条
+  光谱可见时可导出参考样式 PNG，并可选择 JSON/CSV 配套文件。
 
 ## Origin 导入维护与验证
 
@@ -129,6 +132,16 @@ Signal+Baseline 不拆样品，以及坏 Origin 文件不终止同批 CSV/XLSX�
 进入，并同步更新 `UPSTREAM.md`。
 
 ## 科学算法变更规则
+
+### Presentation metrics
+
+展示分析是独立的快速全谱测量，不得复用 `RawPeakAnalyzer` 的结果字段或把显示平滑写回
+`SpectrumSeries`。半高宽必须持续命名为 `Presentation FWHM`，JSON 必须携带其“平滑后、
+相对估计基线半高”的语义声明。改变基线、平滑核、次峰阈值或宽度定义时，应递增
+`PresentationAnalyzer.algorithm_version` 并增加真实形态和边界回归测试。
+
+展示指标适合生成可复核的演示/投稿图，不等于材料归属或模型拟合。跨样品比较峰强、积分或
+SNR 前仍需确认激光功率、狭缝、增益、扫描速率、几何和仪器响应一致。
 
 ### Raw Peak
 
@@ -174,7 +187,8 @@ Savitzky–Golay 参数必须满足窗口为奇数、窗口不超过数据点数
 - 禁止 pickle、Python 对象标签、NaN 和 Infinity。
 - 新正式字段需要递增 `PROJECT_SCHEMA_VERSION`，并为每个旧版本注册一步迁移。
 - 迁移函数必须复制输入、只前进一个版本且可独立测试。
-- schema v2 内置 v1 → v2 材料 ID 迁移；测试必须同时覆盖工程窗口、Raw Peak、Fit 结果，
+- schema v2 内置 v1 → v2 材料 ID 迁移；schema v3 内置 v2 → v3 来源元数据迁移。测试必须
+  同时覆盖工程窗口、Raw Peak、Fit 结果，
   并验证用户自定义选中状态、窗口范围和未知自定义 ID 均不丢失。
 - 读取较新版本继续拒绝，除非实现了明确的只读兼容模式。
 - 加载过程不得在完全验证前改变当前工作区。
@@ -193,7 +207,7 @@ HTTP(S) 链接具有合法绝对 URI；如开发机安装了 markdownlint，可�
 一文件 Windows 构建。两个目标使用隔离 workpath，并在生成后分别执行定时启动 smoke test；
 脚本还从受版本控制的来源逐字收集完整 `LICENSE`、`NOTICE` 与 `UPSTREAM.md`，生成公开的
 `dist/THIRD-PARTY-NOTICES.txt`。最终 `SHA256SUMS.txt` 必须覆盖两个 EXE 和该声明文件。
-详情见 [v1.1.3 旧版 Origin OPJ 兼容发布说明](release_v1.1.3.md)。
+详情见 [v1.1.4 DAT 与参考样式导出发布说明](release_v1.1.4.md)。
 
 Origin 导入采用固定到 `quantized-lab` v0.11.0、提交
 `c34980b82947af3f82f7a9a4ff5692610ba5398f` 的 Apache-2.0 clean-room
@@ -218,5 +232,5 @@ workbook/worksheet reader subset。它不依赖 Origin/COM，不包含上游 Web
 7. 核对 `SHA256SUMS.txt` 有且仅有两个 EXE 和 `THIRD-PARTY-NOTICES.txt` 三条记录；
 8. 记录构建工具版本、产物哈希、解析器固定提交、第三方许可证清单和签名状态。
 
-开发机 EXE 可作为 v1.1.3 可运行交付物，但不得把它描述为已签名或已完成跨机认证的正式
+开发机 EXE 可作为 v1.1.4 可运行交付物，但不得把它描述为已签名或已完成跨机认证的正式
 安装包。

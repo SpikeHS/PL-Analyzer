@@ -1,4 +1,4 @@
-# PL Analyzer Pro v1.1.3 架构
+# PL Analyzer Pro v1.1.4 架构
 
 ## 1. 架构目标
 
@@ -12,16 +12,17 @@ main.py / main_zh.py（语言入口与组合根）
 │   ├── preferences / theme / log / localization
 │   └── main_window（用例编排与统一错误边界）
 ├── core
-│   ├── importing（OPJ / OPJU / CSV / XLSX / XLSM / XLS adapters）
+│   ├── importing（DAT / OPJ / OPJU / CSV / XLSX / XLSM / XLS adapters）
 │   ├── models / workspace（光谱、显示状态、Raw Peak 状态）
 │   ├── configuration（应用设置与材料目录）
 │   └── project / persistence（领域工程与版本化 JSON）
 ├── analysis
 │   ├── raw_peak（无拟合峰搜索）
 │   ├── fitting（模型、基线、预处理与优化）
+│   ├── presentation（全谱展示指标；与 Raw/Fit 指标隔离）
 │   └── fit_session（材料标注结果与工程序列化）
 ├── plotting（Matplotlib Qt adapter）
-└── export（Raw Peak / Fit XLSX、CSV adapters）
+└── export（Raw Peak / Fit 表格与参考样式 PNG/JSON/CSV adapters）
 ```
 
 依赖原则：
@@ -43,7 +44,7 @@ main.py / main_zh.py（语言入口与组合根）
 | `core/models.py` | 光谱、来源、显示状态、材料搜索窗口、Raw Peak 结果 |
 | `core/configuration.py` | 验证应用设置和 schema v1/v2 材料数据库 |
 | `core/importing/column_detector.py` | 共享列识别、数值清洗、排序和重复波长合并 |
-| `core/importing/readers.py` | OPJ/OPJU、CSV、XLSX/XLSM、XLS 扩展名注册与格式隔离 |
+| `core/importing/readers.py` | DAT、OPJ/OPJU、CSV、XLSX/XLSM、XLS 扩展名注册与格式隔离 |
 | `core/importing/origin_backend.py` | 内置解析器数据到稳定 Origin worksheet 中间模型的适配 |
 | `core/importing/origin_reader.py` | CPYA/CPYUA 签名校验与 Origin worksheet 表格化 |
 | `core/importing/_origin_parser/` | 固定版本的 Apache-2.0 clean-room worksheet 解析子集 |
@@ -54,9 +55,11 @@ main.py / main_zh.py（语言入口与组合根）
 | `analysis/raw_peak.py` | 不平滑、不扣基线、不拟合的 Raw Peak 算法 |
 | `analysis/fitting.py` | 四种峰形、三种基线、Savitzky–Golay、联合优化和统计量 |
 | `analysis/fit_session.py` | 材料/样品标注的拟合结果、表格记录和版本化工程 payload |
+| `analysis/presentation.py` | 展示用全谱主峰、基线半高宽、次峰、积分和噪声指标 |
 | `plotting/plot_widget.py` | 非破坏显示变换、Raw Peak 标记、拟合叠加和图像导出 |
 | `export/peak_table.py` | Raw Peak 的原子 XLSX/CSV 导出 |
 | `export/fit_table.py` | 拟合参数与统计量的原子 XLSX/CSV 导出 |
+| `export/presentation_plot.py` | 参考样式 PNG 和可选指标 JSON/绘图 CSV 导出 |
 | `ui/peak_panel.py` | 多材料选择、项目内窗口编辑、候选标签表 |
 | `ui/fit_panel.py` | 拟合设置和只读结果表 |
 | `ui/layer_editor.py` | 外延层增删改、排序与输入校验 |
@@ -78,6 +81,8 @@ main.py / main_zh.py（语言入口与组合根）
    `doping_concentration_cm^-3`。
 10. 工程只有在全部解析、schema 验证和领域校验成功后才替换当前 UI/工作区状态。
 11. 语言只影响显示文本；中英文 EXE 共用材料 ID、算法、导出契约和 `.plproj` schema。
+12. 仪器 DAT 的导入强度明确为 `Signal − Baseline`，原始文件头元数据随来源信息保存。
+13. Presentation 平滑只生成只读副本；Presentation FWHM 不得覆盖或冒充 Raw/Fit FWHM。
 
 ## 4. Origin 原生导入边界
 
@@ -100,7 +105,24 @@ Explorer 文件夹树、Origin 公式重算和项目写入均不在支持范围�
 限制和发布要求见
 [Origin OPJ/OPJU 原生导入](origin_import.md)。
 
-## 5. 多材料 Raw Peak 边界
+## 5. 仪器 DAT 与展示分析边界
+
+DAT reader 只接受带至少三行有效 `Wavelength, Signal, Baseline` 数值的仪器 ASCII 结构。
+它读取文件头 `Key: Value` 元数据，按行计算 `Signal − Baseline` 后再进入共享 ColumnDetector；
+因此通用三列文本不会因为扩展名相同而被静默猜测。`Folder` 末级只作为样品显示名提示，原文件
+路径仍是追溯依据。来源元数据在 `.plproj` schema v3 中保存；内置 v2 → v3 迁移为旧工程
+补充空元数据对象，因此保持向后兼容。
+
+`PresentationAnalyzer` 面向单条完整光谱，使用可配置的轻度 Gaussian 平滑副本估计全谱主峰、
+边缘/低分位基线、相对基线的半高交点、积分、质心、噪声与次峰。输出字段明确命名为
+`presentation_fwhm_nm`，JSON 同时写入语义声明。该模块不写入 Workspace 的 Raw Peak 或 Fit
+结果，不参与材料归属，也不应作为跨测量条件峰强比较的依据。
+
+参考样式 exporter 使用独立 Matplotlib Figure，不依赖 Qt Widget 的当前缩放或主题；PNG、
+JSON、CSV 均先写同目录临时文件再原子替换。图中显示平滑曲线仅用于视觉引导，CSV 同时保留
+导入强度和显示平滑副本以便审计。
+
+## 6. 多材料 Raw Peak 边界
 
 每个已选材料窗口独立调用 `RawPeakAnalyzer`。峰中心受该窗口约束，但峰宽在峰所在的完整连续
 数据段计算，避免窗口边缘人为截断。缺失强度和异常大的波长间隙会拆分连续段。
@@ -117,7 +139,7 @@ Explorer 文件夹树、Origin 公式重算和项目写入均不在支持范围�
 依据是相同的峰位数值，不试图通过波长、强度或外延层自动裁决材料。更复杂的概率归属属于后续
 经过物理验证的模块。
 
-## 6. v1.1 拟合边界
+## 7. v1.1 拟合边界
 
 `SpectrumFitter` 在一个样品的一个材料窗口内工作，支持：
 
@@ -141,7 +163,7 @@ Gaussian、Lorentzian 和 Pseudo-Voigt 使用物理 FWHM 参数化；Voigt 同�
 Lorentzian 分量宽度，并报告组合线型的 FWHM。面积是所选峰形去除联合基线后的模型积分量，
 单位为 a.u.·nm，不是 Raw Peak 的输出。
 
-## 7. 材料数据库边界
+## 8. 材料数据库边界
 
 材料目录是只读加载的版本化 JSON。schema v2 可保存：
 
@@ -158,13 +180,13 @@ Lorentzian 分量宽度，并报告组合线型的 FWHM。面积是所选峰形�
 选择后 UI 会要求先输入有效范围。详细限制见
 [材料搜索窗口与科学边界](material_windows.md)。
 
-## 8. `.plproj` 持久化
+## 9. `.plproj` 持久化
 
 当前顶层格式为：
 
 ```text
 format_id = "pl-analyzer-pro-project"
-schema_version = 2
+schema_version = 3
 project
 ├── workspace
 │   ├── plot_settings
@@ -187,9 +209,10 @@ ID 和领域约束验证后再由主窗口一次性替换。
 较新 schema 被只读拒绝，防止旧程序覆写丢字段。迁移注册表要求每次只前进一个 schema 版本，
 为后续 v1.2–v5.0 保留纯函数迁移路径。内置 v1 → v2 迁移将旧材料 ID `gaas` 和
 `algaas_al040` 规范为材料数据库 v2 的稳定 ID，并同步迁移工程窗口、Raw Peak assignment
-和 Fit assignment；未知自定义材料 ID 保持不变。
+和 Fit assignment；未知自定义材料 ID 保持不变。v2 → v3 迁移为每条光谱来源增加仪器元
+数据对象。
 
-## 9. 后续版本扩展方式
+## 10. 后续版本扩展方式
 
 - v1.2 AI 只消费外延层、带来源的材料上下文、Raw Peak/拟合结果和操作者问题，不直接访问
   Qt Widget，也不把语言模型结论写回原始数据。

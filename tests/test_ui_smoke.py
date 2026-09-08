@@ -34,6 +34,8 @@ def test_main_window_constructs_offscreen(qtbot: pytest.FixtureRequest) -> None:
     qtbot.addWidget(window)
 
     assert window.windowTitle() == f"Untitled — PL Analyzer Pro v{__version__}"
+    assert ".dat" in window._importer.supported_extensions
+    assert window._export_presentation_action.text() == "Export &reference-style PNG…"
 
 
 def test_fit_panel_settings_round_trip(qtbot: pytest.FixtureRequest) -> None:

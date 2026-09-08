@@ -33,6 +33,16 @@ class SourceInfo:
     sheet_name: str | None
     wavelength_column: str
     intensity_column: str
+    metadata: tuple[tuple[str, str], ...] = ()
+
+    def metadata_value(self, key: str, default: str = "") -> str:
+        """Return one case-insensitive instrument metadata value."""
+
+        normalized_key = key.strip().casefold()
+        for candidate, value in self.metadata:
+            if candidate.strip().casefold() == normalized_key:
+                return value
+        return default
 
 
 @dataclass(slots=True)
