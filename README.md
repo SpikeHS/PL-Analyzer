@@ -1,6 +1,6 @@
 # PL Analyzer Pro
 
-**当前版本：v1.1.4**
+**当前版本：v1.1.5**
 
 PL Analyzer Pro 是面向 MBE 与 III–V 族半导体研究的光致发光分析软件。
 项目基于 Python、PySide6、Matplotlib、NumPy、SciPy 和 openpyxl，长期维护。
@@ -68,6 +68,7 @@ PL Analyzer Pro 是面向 MBE 与 III–V 族半导体研究的光致发光分�
 - [Origin 导入](docs/origin_import.md)
 - [材料搜索窗口](docs/material_windows.md)
 - [v1.1.4 发布说明](docs/release_v1.1.4.md)
+- [v1.1.5 发布说明](docs/release_v1.1.5.md)
 
 ## 许可证
 
