@@ -123,6 +123,41 @@ function Set-ProcessEnvironmentValue {
     )
 }
 
+function Invoke-PyInstallerWithCleanPath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$PythonPath,
+
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments
+    )
+
+    $previousPath = $env:PATH
+    $pythonDirectory = Split-Path -Parent $PythonPath
+    $projectDirectory = Split-Path -Parent $pythonDirectory
+    $cleanPathDirectories = @(
+        $pythonDirectory,
+        $projectDirectory,
+        (Join-Path $env:SystemRoot "System32"),
+        $env:SystemRoot,
+        (Join-Path $env:SystemRoot "System32\Wbem"),
+        (Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0")
+    ) | Select-Object -Unique
+    $cleanPath = [string]::Join(
+        [System.IO.Path]::PathSeparator,
+        [string[]]$cleanPathDirectories
+    )
+
+    try {
+        # Keep dependency discovery away from host-agent runtime DLL caches.
+        $env:PATH = $cleanPath
+        & $pythonPath -m PyInstaller @Arguments
+    }
+    finally {
+        $env:PATH = $previousPath
+    }
+}
+
 function Invoke-ExecutableSmokeTest {
     param(
         [Parameter(Mandatory = $true)]
@@ -323,12 +358,17 @@ try {
             -Name $buildLanguageVariableName `
             -Value $buildLanguage
         Write-Host "Building $buildLanguage..."
-        & $pythonPath -m PyInstaller `
-            --noconfirm `
-            --clean `
-            --distpath $distDirectory `
-            --workpath $localeWorkDirectory `
-            $specPath
+        Invoke-PyInstallerWithCleanPath `
+            -PythonPath $pythonPath `
+            -Arguments @(
+                "--noconfirm",
+                "--clean",
+                "--distpath",
+                $distDirectory,
+                "--workpath",
+                $localeWorkDirectory,
+                $specPath
+            )
         Assert-LastCommandSucceeded -Description "$buildLanguage PyInstaller build"
 
         $artifactName = (

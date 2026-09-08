@@ -83,6 +83,8 @@ main.py / main_zh.py（语言入口与组合根）
 11. 语言只影响显示文本；中英文 EXE 共用材料 ID、算法、导出契约和 `.plproj` schema。
 12. 仪器 DAT 的导入强度明确为 `Signal − Baseline`，原始文件头元数据随来源信息保存。
 13. Presentation 平滑只生成只读副本；Presentation FWHM 不得覆盖或冒充 Raw/Fit FWHM。
+14. 术语分层：Raw Peak 报告半 prominence 宽度，Presentation FWHM 是平滑展示指标，
+    模型拟合 FWHM 来自 Gaussian/Lorentzian/Voigt/Pseudo-Voigt 联合优化。
 
 ## 4. Origin 原生导入边界
 
