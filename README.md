@@ -22,6 +22,9 @@ PL Analyzer Pro 是面向 MBE 与 III–V 族半导体研究的光致发光分�
 - Raw Peak 输出峰位、峰高、半高宽、prominence 和质量标记。
 - 支持多材料搜索窗口和重叠窗口去重。
 - 支持 Gaussian、Lorentzian、Voigt、Pseudo-Voigt 和自动 BIC 模型选择。
+- Raw Peak FWHM 定义为半 prominence 宽度；Presentation FWHM 为平滑展示指标；
+  模型拟合 FWHM 来自联合优化。三者命名分开，互不覆盖。
+- DAT 导入强度计算为 `Signal − Baseline`，原始文件头元数据随工程保存。
 - 拟合支持常量、线性、无基线和 Savitzky-Golay 初始化。
 
 ### 导出与工程
@@ -35,6 +38,9 @@ PL Analyzer Pro 是面向 MBE 与 III–V 族半导体研究的光致发光分�
 ## 安装与运行
 
 从 [Releases](https://github.com/SpikeHS/PL-Analyzer/releases) 下载最新版本即可使用。
+
+单光谱参考样式导出生成 `*_PL_metrics.json` 和 `*_PL_processed.csv`，文件名保留主文件
+前缀。完整测试套件当前为 135 项，发布构建前必须全部通过。
 
 ## 使用流程
 
