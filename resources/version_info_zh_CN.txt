@@ -20,14 +20,14 @@ VSVersionInfo(
                             "FileDescription",
                             "光致发光光谱分析软件",
                         ),
-                        StringStruct("FileVersion", "1.1.4"),
+                        StringStruct("FileVersion", "1.1.5"),
                         StringStruct("InternalName", "PL Analyzer Pro 中文版"),
                         StringStruct(
                             "OriginalFilename",
-                            "PL-Analyzer-Pro-v1.1.4-Windows-x64-zh-CN.exe",
+                            "PL-Analyzer-Pro-v1.1.5-Windows-x64-zh-CN.exe",
                         ),
                         StringStruct("ProductName", "PL Analyzer Pro"),
-                        StringStruct("ProductVersion", "1.1.4"),
+                        StringStruct("ProductVersion", "1.1.5"),
                     ],
                 )
             ]

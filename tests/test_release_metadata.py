@@ -9,7 +9,7 @@ from pathlib import Path
 from core import __version__
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "1.1.4"
+EXPECTED_VERSION = "1.1.5"
 EXPECTED_TARGETS = {
     "en-US": ("main.py", "version_info.txt"),
     "zh-CN": ("main_zh.py", "version_info_zh_CN.txt"),

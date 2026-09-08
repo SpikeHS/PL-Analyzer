@@ -20,14 +20,14 @@ VSVersionInfo(
                             "FileDescription",
                             "Photoluminescence spectrum analysis software",
                         ),
-                        StringStruct("FileVersion", "1.1.4"),
+                        StringStruct("FileVersion", "1.1.5"),
                         StringStruct("InternalName", "PL Analyzer Pro"),
                         StringStruct(
                             "OriginalFilename",
-                            "PL-Analyzer-Pro-v1.1.4-Windows-x64-en-US.exe",
+                            "PL-Analyzer-Pro-v1.1.5-Windows-x64-en-US.exe",
                         ),
                         StringStruct("ProductName", "PL Analyzer Pro"),
-                        StringStruct("ProductVersion", "1.1.4"),
+                        StringStruct("ProductVersion", "1.1.5"),
                     ],
                 )
             ]
