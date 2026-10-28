@@ -101,10 +101,11 @@ class SampleListModel(QAbstractListModel):
 
 
 class SamplePanel(QWidget):
-    """Left-side sample visibility and removal controls."""
+    """Left-side sample visibility, Excel export, and removal controls."""
 
     visibility_changed = Signal(str, bool)
     remove_requested = Signal(object)
+    export_requested = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -121,10 +122,17 @@ class SamplePanel(QWidget):
         import_hint.setWordWrap(True)
         import_hint.setStyleSheet("color: #707070;")
 
+        self._export_button = QPushButton(self.tr("Export Excel…"), self)
+        self._export_button.setToolTip(
+            self.tr("Export the complete data of every checked curve to one workbook.")
+        )
+        self._export_button.clicked.connect(lambda: self.export_requested.emit())
+
         remove_button = QPushButton(self.tr("Remove selected"), self)
         remove_button.clicked.connect(self._request_removal)
 
         button_row = QHBoxLayout()
+        button_row.addWidget(self._export_button)
         button_row.addStretch(1)
         button_row.addWidget(remove_button)
 

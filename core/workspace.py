@@ -14,6 +14,8 @@ from core.models import (
     SpectrumSeries,
 )
 
+_PEAK_KEY_DECIMALS = 6
+
 
 class Workspace:
     """Mutable application model with stable sample identities."""
@@ -35,6 +37,7 @@ class Workspace:
         self.plot_settings = plot_settings
         self._spectra: list[SpectrumSeries] = []
         self._material_peak_results: dict[str, tuple[MaterialPeakAnalysis, ...]] = {}
+        self._ignored_peaks: set[tuple[str, float]] = set()
 
     @property
     def spectra(self) -> tuple[SpectrumSeries, ...]:
@@ -44,12 +47,16 @@ class Workspace:
 
     @property
     def peak_results(self) -> Mapping[str, PeakAnalysisResult]:
-        """Return de-duplicated raw peaks keyed by spectrum ID for plotting."""
+        """Return de-duplicated, accepted raw peaks keyed by spectrum ID for plotting."""
 
         aggregated: dict[str, PeakAnalysisResult] = {}
         for spectrum_id, analyses in self._material_peak_results.items():
-            unique_peaks = _unique_peaks(
-                peak for analysis in analyses for peak in analysis.result.peaks
+            unique_peaks = tuple(
+                peak
+                for peak in _unique_peaks(
+                    peak for analysis in analyses for peak in analysis.result.peaks
+                )
+                if self.peak_included(spectrum_id, peak.position_nm)
             )
             diagnostics = tuple(
                 dict.fromkeys(
@@ -103,6 +110,7 @@ class Workspace:
         ]
         for spectrum_id in identifiers:
             self._material_peak_results.pop(spectrum_id, None)
+        self._ignored_peaks = {key for key in self._ignored_peaks if key[0] not in identifiers}
 
     def set_visibility(self, spectrum_id: str, visible: bool) -> None:
         """Update one sample's display visibility."""
@@ -151,12 +159,63 @@ class Workspace:
         self._material_peak_results = validated
 
     def clear_peak_results(self) -> None:
-        """Remove every derived peak result."""
+        """Remove every derived peak result.
+
+        Keep/ignore decisions survive re-analysis because they are keyed by
+        sample identity and peak position, so an unchanged detection comes back
+        with the operator's previous decision intact.
+        """
 
         self._material_peak_results.clear()
 
+    @property
+    def ignored_peaks(self) -> tuple[tuple[str, float], ...]:
+        """Return ignored peak keys as stable ``(spectrum_id, position_nm)`` pairs."""
+
+        return tuple(sorted(self._ignored_peaks))
+
+    def peak_included(self, spectrum_id: str, position_nm: float) -> bool:
+        """Return whether one detected peak is accepted rather than ignored."""
+
+        return _peak_key(spectrum_id, position_nm) not in self._ignored_peaks
+
+    def set_peak_included(
+        self,
+        spectrum_id: str,
+        position_nm: float,
+        included: bool,
+    ) -> bool:
+        """Accept or ignore one detected peak; return whether the state changed."""
+
+        self._find(spectrum_id)
+        key = _peak_key(spectrum_id, position_nm)
+        if included:
+            if key not in self._ignored_peaks:
+                return False
+            self._ignored_peaks.discard(key)
+            return True
+        if key in self._ignored_peaks:
+            return False
+        self._ignored_peaks.add(key)
+        return True
+
+    def restore_ignored_peaks(self, entries: Iterable[tuple[str, float]]) -> None:
+        """Replace the ignored-peak marks with validated project state."""
+
+        valid_ids = {spectrum.spectrum_id for spectrum in self._spectra}
+        self._ignored_peaks = {
+            _peak_key(spectrum_id, position_nm)
+            for spectrum_id, position_nm in entries
+            if spectrum_id in valid_ids
+        }
+
     def peak_table_records(self, *, visible_only: bool = True) -> tuple[PeakTableRecord, ...]:
-        """Flatten current results in sample and wavelength order."""
+        """Flatten current results in sample and wavelength order.
+
+        Records carry the operator's keep/ignore decision so the table can show
+        both accepted and ignored peaks while every downstream consumer can
+        filter on ``included``.
+        """
 
         records: list[PeakTableRecord] = []
         for spectrum in self._spectra:
@@ -182,6 +241,8 @@ class Workspace:
                         fwhm_nm=peak.fwhm_nm,
                         prominence_au=peak.prominence_au,
                         quality_flags=quality_flags,
+                        spectrum_id=spectrum.spectrum_id,
+                        included=self.peak_included(spectrum.spectrum_id, peak.position_nm),
                     )
                 )
         return tuple(records)
@@ -201,6 +262,16 @@ class Workspace:
         while f"{clean_name} [{suffix}]".casefold() in existing_names:
             suffix += 1
         return f"{clean_name} [{suffix}]"
+
+
+def _peak_key(spectrum_id: str, position_nm: float) -> tuple[str, float]:
+    """Return the stable identity of one detected peak inside the workspace.
+
+    Peak positions are rounded so that a float representation difference of the
+    same detection cannot silently drop the operator's keep/ignore decision.
+    """
+
+    return (str(spectrum_id), round(float(position_nm), _PEAK_KEY_DECIMALS))
 
 
 def _unique_peaks(peaks: Iterable[PeakResult]) -> tuple[PeakResult, ...]:
