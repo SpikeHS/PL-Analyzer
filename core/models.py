@@ -149,7 +149,14 @@ class PlotDisplaySettings:
 
 @dataclass(frozen=True, slots=True)
 class PeakTableRecord:
-    """Flattened peak result used by table and export adapters."""
+    """Flattened peak result used by table and export adapters.
+
+    ``included`` carries the operator's keep/ignore decision for this peak.
+    Ignored peaks stay visible in the table so the decision can be reverted, but
+    they are excluded from the plot markers, the clipboard copy, and every
+    results export. ``spectrum_id`` is the stable owner used to store that
+    decision in the workspace and the project file.
+    """
 
     sample_name: str
     material_names: tuple[str, ...]
@@ -159,3 +166,5 @@ class PeakTableRecord:
     fwhm_nm: float | None
     prominence_au: float
     quality_flags: tuple[str, ...]
+    spectrum_id: str = ""
+    included: bool = True

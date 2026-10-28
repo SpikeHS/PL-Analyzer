@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, replace
 
 from PySide6.QtCore import (
     QT_TRANSLATE_NOOP,
@@ -238,9 +238,17 @@ class MaterialWindowModel(QAbstractTableModel):
 
 
 class PeakTableModel(QAbstractTableModel):
-    """Read-only table model for de-duplicated, material-labelled raw peaks."""
+    """Checkable, sortable table model for material-labelled raw peaks.
 
+    Column 0 is the operator's keep/ignore decision for each detected peak.
+    Unchecked rows stay readable but no longer reach the plot markers, the
+    clipboard copy, or any results export. Every other column sorts by its
+    numeric or text value, never by the rendered string.
+    """
+
+    inclusion_changed = Signal(str, float, bool)
     _HEADERS = (
+        QT_TRANSLATE_NOOP("PeakTableModel", "Include"),
         QT_TRANSLATE_NOOP("PeakTableModel", "Sample"),
         QT_TRANSLATE_NOOP("PeakTableModel", "Material"),
         QT_TRANSLATE_NOOP("PeakTableModel", "Peak"),
@@ -250,10 +258,15 @@ class PeakTableModel(QAbstractTableModel):
         QT_TRANSLATE_NOOP("PeakTableModel", "Prominence\n(a.u.)"),
         QT_TRANSLATE_NOOP("PeakTableModel", "Quality"),
     )
+    # Clipboard layout: no header row, three columns only — sample, peak
+    # position with its unit, peak height.
+    _NUMERIC_COLUMNS = (4, 5, 6, 7)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._records: tuple[PeakTableRecord, ...] = ()
+        self._sort_column = -1
+        self._sort_order = Qt.SortOrder.AscendingOrder
 
     @property
     def records(self) -> tuple[PeakTableRecord, ...]:
@@ -261,12 +274,56 @@ class PeakTableModel(QAbstractTableModel):
 
         return self._records
 
+    @property
+    def checked_records(self) -> tuple[PeakTableRecord, ...]:
+        """Return the rows the operator kept for plotting and export."""
+
+        return tuple(record for record in self._records if record.included)
+
+    @property
+    def sort_state(self) -> tuple[int, Qt.SortOrder]:
+        """Return the active sort column and order, or ``(-1, Ascending)``."""
+
+        return (self._sort_column, self._sort_order)
+
     def replace(self, records: Sequence[PeakTableRecord]) -> None:
-        """Replace the current result snapshot."""
+        """Replace the current result snapshot while keeping the active order."""
 
         self.beginResetModel()
-        self._records = tuple(records)
+        self._records = self._sorted(records)
         self.endResetModel()
+
+    def sort(  # noqa: N802
+        self,
+        column: int,
+        order: Qt.SortOrder = Qt.SortOrder.AscendingOrder,
+    ) -> None:
+        """Reorder rows by one column; the checkbox column is not sortable."""
+
+        if not 0 < column < len(self._HEADERS):
+            return
+        self._sort_column = column
+        self._sort_order = order
+        if not self._records:
+            return
+        self.beginResetModel()
+        self._records = self._sorted(self._records)
+        self.endResetModel()
+
+    def _sorted(
+        self,
+        records: Sequence[PeakTableRecord],
+    ) -> tuple[PeakTableRecord, ...]:
+        rows = tuple(records)
+        if self._sort_column < 0:
+            return rows
+        return tuple(
+            sorted(
+                rows,
+                key=_peak_sort_key(self._sort_column),
+                reverse=self._sort_order == Qt.SortOrder.DescendingOrder,
+            )
+        )
 
     def rowCount(self, parent: QModelIndex | None = None) -> int:  # noqa: N802
         return 0 if parent is not None and parent.isValid() else len(self._records)
@@ -292,6 +349,17 @@ class PeakTableModel(QAbstractTableModel):
         if not index.isValid() or not 0 <= index.row() < len(self._records):
             return None
         record = self._records[index.row()]
+        if index.column() == 0:
+            if role == Qt.ItemDataRole.CheckStateRole:
+                return Qt.CheckState.Checked if record.included else Qt.CheckState.Unchecked
+            if role == Qt.ItemDataRole.TextAlignmentRole:
+                return int(Qt.AlignmentFlag.AlignCenter)
+            if role == Qt.ItemDataRole.ToolTipRole:
+                return self.tr(
+                    "Checked peaks are marked on the plot, copied, and exported. "
+                    "Uncheck a peak to ignore it."
+                )
+            return None
         values: tuple[object, ...] = (
             record.sample_name,
             ", ".join(record.material_names),
@@ -303,38 +371,101 @@ class PeakTableModel(QAbstractTableModel):
             ", ".join(record.quality_flags),
         )
         if role == Qt.ItemDataRole.DisplayRole:
-            return values[index.column()]
-        if role == Qt.ItemDataRole.TextAlignmentRole and index.column() in {2, 3, 4, 5, 6}:
+            return values[index.column() - 1]
+        if role == Qt.ItemDataRole.TextAlignmentRole and index.column() in self._NUMERIC_COLUMNS:
             return int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        if role == Qt.ItemDataRole.ToolTipRole and index.column() == 5:
+        if role == Qt.ItemDataRole.ToolTipRole and index.column() == 6:
             return self.tr(
                 "Raw half-prominence width in wavelength units. "
                 "No fit or baseline correction is applied."
             )
         return None
 
-    def to_tsv(self, selected_rows: Sequence[int] | None = None) -> str:
-        """Serialize selected or all rows for clipboard use."""
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+        if not index.isValid():
+            return Qt.ItemFlag.NoItemFlags
+        flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        if index.column() == 0:
+            flags |= Qt.ItemFlag.ItemIsUserCheckable
+        return flags
+
+    def setData(
+        self,
+        index: QModelIndex,
+        value: object,
+        role: int = Qt.ItemDataRole.EditRole,
+    ) -> bool:  # noqa: N802
+        if (
+            role != Qt.ItemDataRole.CheckStateRole
+            or index.column() != 0
+            or not index.isValid()
+            or not 0 <= index.row() < len(self._records)
+        ):
+            return False
+        check_state = normalize_check_state(value)
+        if check_state is None:
+            return False
+        record = self._records[index.row()]
+        included = check_state == Qt.CheckState.Checked
+        if record.included == included:
+            return False
+        self._records = (
+            *self._records[: index.row()],
+            replace(record, included=included),
+            *self._records[index.row() + 1 :],
+        )
+        self.dataChanged.emit(index, index, [Qt.ItemDataRole.CheckStateRole])
+        self.inclusion_changed.emit(record.spectrum_id, record.position_nm, included)
+        return True
+
+    def set_all_included(self, included: bool) -> None:
+        """Check or uncheck every row in one operation."""
+
+        rows = [row for row, record in enumerate(self._records) if record.included != included]
+        if not rows:
+            return
+        updated = list(self._records)
+        for row in rows:
+            updated[row] = replace(updated[row], included=included)
+        self._records = tuple(updated)
+        self.dataChanged.emit(
+            self.index(0, 0),
+            self.index(len(self._records) - 1, 0),
+            [Qt.ItemDataRole.CheckStateRole],
+        )
+        for row in rows:
+            record = self._records[row]
+            self.inclusion_changed.emit(record.spectrum_id, record.position_nm, included)
+
+    def to_tsv(
+        self,
+        selected_rows: Sequence[int] | None = None,
+        *,
+        checked_only: bool = True,
+    ) -> str:
+        """Serialize the kept peaks as header-free, tab-separated clipboard text.
+
+        Each line carries only the sample name, the peak position with its unit,
+        and the peak height, so the paste is immediately usable in a report or a
+        spreadsheet. There is no header row and no include/quality column.
+        """
 
         row_indexes = (
             sorted(set(selected_rows)) if selected_rows else list(range(len(self._records)))
         )
-        lines = ["\t".join(header.replace("\n", " ") for header in self._HEADERS)]
+        lines: list[str] = []
         for row_index in row_indexes:
             if not 0 <= row_index < len(self._records):
                 continue
             record = self._records[row_index]
+            if checked_only and not record.included:
+                continue
             lines.append(
                 "\t".join(
                     (
                         record.sample_name,
-                        ", ".join(record.material_names),
-                        str(record.peak_number),
-                        f"{record.position_nm:.8g}",
-                        f"{record.height_au:.8g}",
-                        "" if record.fwhm_nm is None else f"{record.fwhm_nm:.8g}",
-                        f"{record.prominence_au:.8g}",
-                        ", ".join(record.quality_flags),
+                        f"{record.position_nm:.4f} nm",
+                        f"{record.height_au:.6g}",
                     )
                 )
             )
@@ -342,13 +473,19 @@ class PeakTableModel(QAbstractTableModel):
 
 
 class PeakPanel(QWidget):
-    """Right-side multi-material windows and raw peak results."""
+    """Right-side multi-material windows and checkable raw peak results."""
 
     search_requested = Signal()
     copy_requested = Signal(str)
     export_requested = Signal()
+    inclusion_changed = Signal(str, float, bool)
     invalid_window_selected = Signal(str)
     settings_changed = Signal()
+
+    _INCLUDE_COLUMN_WIDTH = 44
+    # Upper bounds keep nine columns readable inside a docked panel; the last
+    # column ("Quality") stretches and every column stays user-resizable.
+    _COLUMN_MAX_WIDTHS = {1: 130, 2: 150, 3: 44, 4: 80, 5: 80, 6: 80, 7: 96}
 
     def __init__(
         self,
@@ -384,27 +521,45 @@ class PeakPanel(QWidget):
         search_button.clicked.connect(self.search_requested)
 
         self._peak_model = PeakTableModel(self)
+        self._peak_model.inclusion_changed.connect(self.inclusion_changed.emit)
         self._peak_table = QTableView(self)
         self._peak_table.setModel(self._peak_model)
         self._peak_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self._peak_table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self._peak_table.setAlternatingRowColors(True)
-        self._peak_table.horizontalHeader().setStretchLastSection(True)
+        peak_header = self._peak_table.horizontalHeader()
+        peak_header.setStretchLastSection(True)
+        peak_header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
+        peak_header.resizeSection(0, self._INCLUDE_COLUMN_WIDTH)
+        peak_header.setSectionsClickable(True)
+        peak_header.setSortIndicatorShown(False)
+        peak_header.setToolTip(
+            self.tr("Click a column header to sort ascending, click again for descending.")
+        )
+        peak_header.sectionClicked.connect(self._sort_peak_table)
 
-        copy_button = QPushButton(self.tr("Copy"), self)
+        copy_button = QPushButton(self.tr("Copy checked"), self)
+        copy_button.setToolTip(self.tr("Copy every checked peak as tab-separated text."))
         copy_button.clicked.connect(self._copy)
         export_button = QPushButton(self.tr("Export…"), self)
         export_button.clicked.connect(self.export_requested)
+        check_all_button = QPushButton(self.tr("Check all"), self)
+        check_all_button.clicked.connect(lambda: self._peak_model.set_all_included(True))
+        uncheck_all_button = QPushButton(self.tr("Uncheck all"), self)
+        uncheck_all_button.clicked.connect(lambda: self._peak_model.set_all_included(False))
         result_buttons = QHBoxLayout()
         result_buttons.addWidget(copy_button)
         result_buttons.addWidget(export_button)
+        result_buttons.addWidget(check_all_button)
+        result_buttons.addWidget(uncheck_all_button)
         result_buttons.addStretch(1)
 
         note = QLabel(
             self.tr(
                 "Multiple material windows can be active together. Overlapping detections "
                 "are shown once while retaining every material label. Raw FWHM is measured "
-                "at half prominence without fitting or baseline correction."
+                "at half prominence without fitting or baseline correction. Only checked "
+                "peaks are drawn, copied, and exported."
             ),
             self,
         )
@@ -446,11 +601,62 @@ class PeakPanel(QWidget):
 
         self._peak_model.replace(records)
         self._peak_table.resizeColumnsToContents()
+        header = self._peak_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
+        header.resizeSection(0, self._INCLUDE_COLUMN_WIDTH)
+        for column, maximum in self._COLUMN_MAX_WIDTHS.items():
+            if header.sectionSize(column) > maximum:
+                header.resizeSection(column, maximum)
+
+    @property
+    def checked_records(self) -> tuple[PeakTableRecord, ...]:
+        """Return the peak rows the operator kept."""
+
+        return self._peak_model.checked_records
+
+    def _sort_peak_table(self, column: int) -> None:
+        """Toggle ascending/descending order when a peak table header is clicked."""
+
+        if column == 0:
+            return
+        header = self._peak_table.horizontalHeader()
+        order = Qt.SortOrder.AscendingOrder
+        if (
+            header.sortIndicatorSection() == column
+            and header.sortIndicatorOrder() == Qt.SortOrder.AscendingOrder
+        ):
+            order = Qt.SortOrder.DescendingOrder
+        self._peak_model.sort(column, order)
+        header.setSortIndicatorShown(True)
+        header.setSortIndicator(column, order)
 
     def _copy(self) -> None:
-        rows = [index.row() for index in self._peak_table.selectionModel().selectedRows()]
-        self.copy_requested.emit(self._peak_model.to_tsv(rows))
+        self.copy_requested.emit(self._peak_model.to_tsv())
 
 
 def _valid_window(minimum: float | None, maximum: float | None) -> bool:
     return minimum is not None and maximum is not None and minimum > 0 and minimum < maximum
+
+
+def _peak_sort_key(column: int) -> Callable[[PeakTableRecord], object]:
+    """Return the value based sort key for one peak table column."""
+
+    match column:
+        case 1:
+            return lambda record: record.sample_name.casefold()
+        case 2:
+            return lambda record: tuple(name.casefold() for name in record.material_names)
+        case 3:
+            return lambda record: record.peak_number
+        case 4:
+            return lambda record: record.position_nm
+        case 5:
+            return lambda record: record.height_au
+        case 6:
+            return lambda record: (record.fwhm_nm is None, record.fwhm_nm or 0.0)
+        case 7:
+            return lambda record: record.prominence_au
+        case 8:
+            return lambda record: tuple(flag.casefold() for flag in record.quality_flags)
+        case _:
+            return lambda record: record.position_nm

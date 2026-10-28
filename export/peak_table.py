@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import csv
 import os
-import tempfile
 from collections.abc import Sequence
-from contextlib import suppress
 from pathlib import Path
 
 from core.errors import ExportError
 from core.models import PeakTableRecord
+from export._atomic import remove_if_present, temporary_path
 
 
 class PeakTableExporter:
@@ -57,7 +56,7 @@ class PeakTableExporter:
             ) from exc
 
         path.parent.mkdir(parents=True, exist_ok=True)
-        temp_path = _temporary_path(path)
+        temp_path = temporary_path(path)
         try:
             workbook = Workbook()
             worksheet = workbook.active
@@ -78,7 +77,7 @@ class PeakTableExporter:
             workbook.save(temp_path)
             os.replace(temp_path, path)
         except Exception as exc:
-            _remove_if_present(temp_path)
+            remove_if_present(temp_path)
             if isinstance(exc, ExportError):
                 raise
             raise ExportError(
@@ -89,7 +88,7 @@ class PeakTableExporter:
 
     def _export_csv(self, records: Sequence[PeakTableRecord], path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        temp_path = _temporary_path(path)
+        temp_path = temporary_path(path)
         try:
             with temp_path.open("w", encoding="utf-8-sig", newline="") as stream:
                 writer = csv.writer(stream)
@@ -98,7 +97,7 @@ class PeakTableExporter:
                     writer.writerow(_record_values(record))
             os.replace(temp_path, path)
         except OSError as exc:
-            _remove_if_present(temp_path)
+            remove_if_present(temp_path)
             raise ExportError(
                 f"Unable to export CSV results: {path.name}",
                 code="E_EXPORT_WRITE",
@@ -117,18 +116,3 @@ def _record_values(record: PeakTableRecord) -> tuple[object, ...]:
         record.prominence_au,
         ", ".join(record.quality_flags),
     )
-
-
-def _temporary_path(target: Path) -> Path:
-    descriptor, name = tempfile.mkstemp(
-        prefix=f".{target.name}.",
-        suffix=".tmp",
-        dir=target.parent,
-    )
-    os.close(descriptor)
-    return Path(name)
-
-
-def _remove_if_present(path: Path) -> None:
-    with suppress(OSError):
-        path.unlink(missing_ok=True)

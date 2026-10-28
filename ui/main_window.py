@@ -7,7 +7,7 @@ import traceback
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import (
     QAction,
     QActionGroup,
@@ -43,6 +43,7 @@ from core.models import (
     AmplitudeMode,
     AxisScale,
     MaterialPeakAnalysis,
+    PeakTableRecord,
     PlotDisplaySettings,
 )
 from core.persistence import ProjectPersistence
@@ -51,6 +52,7 @@ from core.workspace import Workspace
 from export.fit_table import FitTableExporter
 from export.peak_table import PeakTableExporter
 from export.presentation_plot import PresentationPlotExporter
+from export.spectrum_table import SpectrumTableExporter
 from plotting.plot_widget import SpectrumPlotWidget
 from ui.fit_panel import FitPanel
 from ui.layer_editor import LayerEditorWidget
@@ -86,6 +88,7 @@ class MainWindow(QMainWindow):
         self._exporter = exporter
         self._fit_exporter = FitTableExporter()
         self._presentation_exporter = PresentationPlotExporter()
+        self._spectrum_exporter = SpectrumTableExporter()
         self._fitter = SpectrumFitter()
         self._fit_store = FitResultStore()
         self._analysis_defaults = analysis_defaults
@@ -94,6 +97,9 @@ class MainWindow(QMainWindow):
         self._project = PLProject(workspace=workspace)
         self._project_path: Path | None = None
         self._dirty = False
+        self._render_timer = QTimer(self)
+        self._render_timer.setSingleShot(True)
+        self._render_timer.timeout.connect(self._render_plot)
 
         self._theme = load_theme_preference()
         self.setWindowTitle(self.tr("PL Analyzer Pro — v{version}").format(version=__version__))
@@ -117,9 +123,9 @@ class MainWindow(QMainWindow):
         analysis_side_tabs = QTabWidget(self)
         analysis_side_tabs.addTab(self._peak_panel, self.tr("Raw Peak"))
         analysis_side_tabs.addTab(self._fit_panel, self.tr("Fit"))
-        analysis_side_tabs.setMinimumWidth(400)
+        analysis_side_tabs.setMinimumWidth(430)
         splitter.addWidget(analysis_side_tabs)
-        splitter.setSizes([230, 790, 420])
+        splitter.setSizes([220, 700, 520])
         splitter.setStretchFactor(1, 1)
         central_tabs = QTabWidget(self)
         central_tabs.addTab(splitter, self.tr("PL Analysis"))
@@ -266,6 +272,15 @@ class MainWindow(QMainWindow):
 
         self._export_plot_action = QAction(self.tr("Export &plot…"), self)
         self._export_plot_action.triggered.connect(self._export_plot)
+        self._export_spectra_action = QAction(self.tr("Export checked &curves…"), self)
+        self._export_spectra_action.setShortcut("Ctrl+E")
+        self._export_spectra_action.setToolTip(
+            self.tr(
+                "Write the complete data of every checked curve, plus its accepted raw "
+                "peaks, to one Excel workbook."
+            )
+        )
+        self._export_spectra_action.triggered.connect(self._export_spectra_excel)
         self._export_presentation_action = QAction(
             self.tr("Export &reference-style PNG…"),
             self,
@@ -352,6 +367,7 @@ class MainWindow(QMainWindow):
         file_menu.addSeparator()
         file_menu.addAction(self._open_action)
         export_menu = file_menu.addMenu(self.tr("&Export"))
+        export_menu.addAction(self._export_spectra_action)
         export_menu.addAction(self._export_plot_action)
         export_menu.addAction(self._export_presentation_action)
         export_menu.addAction(self._export_peaks_action)
@@ -393,6 +409,7 @@ class MainWindow(QMainWindow):
         toolbar.addAction(self._save_project_action)
         toolbar.addSeparator()
         toolbar.addAction(self._open_action)
+        toolbar.addAction(self._export_spectra_action)
         toolbar.addAction(self._peak_search_action)
         toolbar.addAction(self._fit_action)
         toolbar.addSeparator()
@@ -404,9 +421,11 @@ class MainWindow(QMainWindow):
     def _connect_signals(self) -> None:
         self._sample_panel.visibility_changed.connect(self._on_visibility_changed)
         self._sample_panel.remove_requested.connect(self._remove_spectra)
+        self._sample_panel.export_requested.connect(self._export_spectra_excel)
         self._peak_panel.search_requested.connect(lambda: self._run_peak_search(show_summary=True))
         self._peak_panel.copy_requested.connect(self._copy_peak_table)
         self._peak_panel.export_requested.connect(self._export_peak_table)
+        self._peak_panel.inclusion_changed.connect(self._on_peak_inclusion_changed)
         self._peak_panel.invalid_window_selected.connect(
             lambda name: QMessageBox.information(
                 self,
@@ -488,16 +507,18 @@ class MainWindow(QMainWindow):
         self._set_dirty(True)
         self._refresh_views()
         peak_count = len(self._workspace.peak_table_records())
+        kept_count = len(self._checked_peak_records())
         range_summary = ", ".join(
             f"{window.material_name} {window.min_nm:g}–{window.max_nm:g} nm" for window in windows
         )
         self._log_panel.write(
             "info",
             self.tr(
-                "Raw peak analysis completed: {peak_count} unique peak(s); "
-                "windows: {range_summary}."
+                "Raw peak analysis completed: {peak_count} unique peak(s), "
+                "{kept_count} kept; windows: {range_summary}."
             ).format(
                 peak_count=peak_count,
+                kept_count=kept_count,
                 range_summary=range_summary,
             ),
         )
@@ -623,6 +644,33 @@ class MainWindow(QMainWindow):
         self._set_dirty(True)
         self._refresh_views()
 
+    def _on_peak_inclusion_changed(
+        self,
+        spectrum_id: str,
+        position_nm: float,
+        included: bool,
+    ) -> None:
+        """Apply one keep/ignore decision without resetting the peak table model."""
+
+        try:
+            changed = self._workspace.set_peak_included(spectrum_id, position_nm, included)
+        except KeyError:
+            self._logger.warning(
+                "Ignoring peak-selection change for removed spectrum %s.",
+                spectrum_id,
+            )
+            return
+        if not changed:
+            return
+        self._set_dirty(True)
+        self._schedule_plot_render()
+
+    def _schedule_plot_render(self) -> None:
+        """Coalesce rapid keep/ignore changes into one Matplotlib repaint."""
+
+        if not self._render_timer.isActive():
+            self._render_timer.start(0)
+
     def _remove_spectra(self, spectrum_ids: object) -> None:
         identifiers = tuple(str(value) for value in spectrum_ids)
         self._workspace.remove_spectra(identifiers)
@@ -636,14 +684,17 @@ class MainWindow(QMainWindow):
         )
 
     def _refresh_views(self) -> None:
+        self._render_plot()
+        self._peak_panel.set_records(self._workspace.peak_table_records())
+        self._fit_panel.set_records(self._fit_store.table_records())
+
+    def _render_plot(self) -> None:
         self._plot_widget.render(
             self._workspace.spectra,
             self._workspace.peak_results,
             self._workspace.plot_settings,
             self._fit_store.assignments,
         )
-        self._peak_panel.set_records(self._workspace.peak_table_records())
-        self._fit_panel.set_records(self._fit_store.table_records())
 
     def _set_amplitude_mode(self, mode: AmplitudeMode) -> None:
         self._workspace.plot_settings.amplitude_mode = mode
@@ -795,6 +846,10 @@ class MainWindow(QMainWindow):
         self._project.fit_results = self._fit_store.to_project_payload()
         self._project.extensions["theme"] = self._theme.value
         self._project.extensions["fit_ui_settings"] = self._fit_panel.settings_snapshot()
+        self._project.extensions["ignored_peaks"] = [
+            {"spectrum_id": spectrum_id, "position_nm": position_nm}
+            for spectrum_id, position_nm in self._workspace.ignored_peaks
+        ]
         self._project.extensions["raw_peak_preferences"] = {
             "relative_prominence": self._analysis_defaults.relative_prominence,
             "noise_sigma_factor": self._analysis_defaults.noise_sigma_factor,
@@ -848,6 +903,7 @@ class MainWindow(QMainWindow):
         fit_settings = project.extensions.get("fit_ui_settings")
         if isinstance(fit_settings, Mapping):
             self._fit_panel.restore_settings(fit_settings)
+        self._restore_ignored_peaks(project.extensions.get("ignored_peaks"))
         raw_peak_preferences = project.extensions.get("raw_peak_preferences")
         if isinstance(raw_peak_preferences, Mapping):
             self._restore_analysis_defaults(raw_peak_preferences)
@@ -865,6 +921,33 @@ class MainWindow(QMainWindow):
                 pass
         self._refresh_views()
         self._set_dirty(False)
+
+    def _restore_ignored_peaks(self, entries: object) -> None:
+        """Restore project-local keep/ignore decisions for detected peaks."""
+
+        if not isinstance(entries, list):
+            return
+        valid_ids = {spectrum.spectrum_id for spectrum in self._workspace.spectra}
+        accepted: list[tuple[str, float]] = []
+        for entry in entries:
+            if not isinstance(entry, Mapping):
+                continue
+            spectrum_id = entry.get("spectrum_id")
+            position = entry.get("position_nm")
+            if not isinstance(spectrum_id, str) or spectrum_id not in valid_ids:
+                continue
+            if isinstance(position, bool) or not isinstance(position, (int, float)):
+                continue
+            accepted.append((spectrum_id, float(position)))
+        self._workspace.restore_ignored_peaks(accepted)
+        dropped = len(entries) - len(accepted)
+        if dropped:
+            self._log_panel.write(
+                "warning",
+                self.tr("Ignored {count} invalid stored peak-selection entry/entries.").format(
+                    count=dropped
+                ),
+            )
 
     def _restore_analysis_defaults(
         self,
@@ -941,20 +1024,82 @@ class MainWindow(QMainWindow):
         )
 
     def _copy_peak_table(self, text: str) -> None:
-        if not self._workspace.peak_table_records():
+        if not self._checked_peak_records():
             QMessageBox.information(
                 self,
                 self.tr("Copy Peak Table"),
-                self.tr("There are no results to copy."),
+                self.tr("Check at least one peak in the Raw Peak table before copying."),
             )
             return
         QApplication.clipboard().setText(text)
         self._log_panel.write(
             "info",
-            self.tr("Peak table copied to the clipboard."),
+            self.tr("Checked peak table copied to the clipboard."),
         )
 
+    def _checked_peak_records(self) -> tuple[PeakTableRecord, ...]:
+        """Return accepted peak rows for the currently visible samples."""
+
+        return tuple(record for record in self._workspace.peak_table_records() if record.included)
+
+    def _export_spectra_excel(self) -> None:
+        """Export every checked curve, plus its accepted peaks, to one workbook."""
+
+        spectra = self._workspace.visible_spectra()
+        if not spectra:
+            QMessageBox.information(
+                self,
+                self.tr("Export Excel"),
+                self.tr("Check at least one curve in the Samples list before exporting to Excel."),
+            )
+            return
+        visible_ids = {spectrum.spectrum_id for spectrum in spectra}
+        accepted_records = tuple(
+            record
+            for record in self._workspace.peak_table_records()
+            if record.included and record.spectrum_id in visible_ids
+        )
+        suggested_name = (
+            f"{_safe_filename(spectra[0].name)}_curves.xlsx"
+            if len(spectra) == 1
+            else "PL_curves.xlsx"
+        )
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            self.tr("Export checked curves to Excel"),
+            suggested_name,
+            self.tr("Excel workbook (*.xlsx)"),
+        )
+        if not filename:
+            return
+        path = Path(filename)
+        if path.suffix.casefold() != ".xlsx":
+            path = path.with_suffix(".xlsx")
+        try:
+            self._spectrum_exporter.export(spectra, path, peak_records=accepted_records)
+            self._log_panel.write(
+                "info",
+                self.tr("Exported {count} checked curve(s) to {path}.").format(
+                    count=len(spectra),
+                    path=path,
+                ),
+            )
+            self.statusBar().showMessage(
+                self.tr("Exported {filename}").format(filename=path.name),
+                5000,
+            )
+        except Exception as exc:
+            self._report_exception(self.tr("Excel export failed"), exc)
+
     def _export_peak_table(self) -> None:
+        records = self._checked_peak_records()
+        if not records:
+            QMessageBox.information(
+                self,
+                self.tr("Export peak table"),
+                self.tr("Check at least one peak in the Raw Peak table before exporting."),
+            )
+            return
         filename, selected_filter = QFileDialog.getSaveFileName(
             self,
             self.tr("Export peak table"),
@@ -967,7 +1112,7 @@ class MainWindow(QMainWindow):
         if not path.suffix:
             path = path.with_suffix(".csv" if "CSV" in selected_filter else ".xlsx")
         try:
-            self._exporter.export(self._workspace.peak_table_records(), path)
+            self._exporter.export(records, path)
             self._log_panel.write(
                 "info",
                 self.tr("Peak table exported: {path}").format(path=path),

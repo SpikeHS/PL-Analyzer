@@ -10,3 +10,4 @@ dist/
 *.log
 .coverage
 htmlcov/
+.tmp/

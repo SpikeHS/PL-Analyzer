@@ -9,7 +9,7 @@ from pathlib import Path
 from core import __version__
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "1.1.5"
+EXPECTED_VERSION = "1.1.6"
 EXPECTED_TARGETS = {
     "en-US": ("main.py", "version_info.txt"),
     "zh-CN": ("main_zh.py", "version_info_zh_CN.txt"),
@@ -31,13 +31,14 @@ def test_core_and_spec_share_the_release_version() -> None:
 def test_windows_version_resources_match_each_release_artifact() -> None:
     """Both locale-specific Windows resources must describe the exact output."""
 
+    fixed_version = "(" + ", ".join((*EXPECTED_VERSION.split("."), "0")) + ")"
     for language, (_, version_file_name) in EXPECTED_TARGETS.items():
         resource_path = PROJECT_ROOT / "resources" / version_file_name
         resource_text = resource_path.read_text(encoding="utf-8")
         artifact_name = f"PL-Analyzer-Pro-v{EXPECTED_VERSION}-Windows-x64-{language}.exe"
 
-        assert "filevers=(1, 1, 4, 0)" in resource_text
-        assert "prodvers=(1, 1, 4, 0)" in resource_text
+        assert f"filevers={fixed_version}" in resource_text
+        assert f"prodvers={fixed_version}" in resource_text
         assert _string_struct_value(resource_text, "FileVersion") == EXPECTED_VERSION
         assert _string_struct_value(resource_text, "ProductVersion") == EXPECTED_VERSION
         assert _string_struct_value(resource_text, "OriginalFilename") == artifact_name

@@ -1,6 +1,6 @@
 # PL Analyzer Pro
 
-**当前版本：v1.1.5**
+**当前版本：v1.1.6**
 
 PL Analyzer Pro 是面向 MBE 与 III–V 族半导体研究的光致发光分析软件。
 项目基于 Python、PySide6、Matplotlib、NumPy、SciPy 和 openpyxl，长期维护。
@@ -30,7 +30,13 @@ PL Analyzer Pro 是面向 MBE 与 III–V 族半导体研究的光致发光分�
 ### 导出与工程
 
 - 导出 PNG、SVG、PDF。
+- 左侧样品列表勾选曲线后，一键导出 Excel：每条勾选曲线一个工作表，写入该曲线的完整
+  波长/强度数据；有保留峰时追加一张 `Peaks` 表。
 - Raw Peak 与拟合表可导出 XLSX、CSV。
+- 寻峰结果逐行可勾选/忽略；忽略的峰不再标注、复制或导出，取消勾选可随时恢复。
+- 点击 `峰位`、`峰高` 等列标题即可升序/降序排序，排序状态在重新寻峰后保持。
+- `复制勾选` 一次复制所有已勾选峰，每行只有 `样品`、`峰位`（带 nm 单位）、`峰高`
+  三列，无表头，可直接粘贴进 Excel 或报告。
 - 单光谱可导出参考样式 PNG，并附带 JSON 指标、CSV 数据。
 - `.plproj` 使用版本化 JSON，内嵌原始数组，可独立恢复。
 - Layer Editor 记录层结构、厚度、成分和掺杂。
@@ -40,15 +46,16 @@ PL Analyzer Pro 是面向 MBE 与 III–V 族半导体研究的光致发光分�
 从 [Releases](https://github.com/SpikeHS/PL-Analyzer/releases) 下载最新版本即可使用。
 
 单光谱参考样式导出生成 `*_PL_metrics.json` 和 `*_PL_processed.csv`，文件名保留主文件
-前缀。完整测试套件当前为 135 项，发布构建前必须全部通过。
+前缀。完整测试套件当前为 152 项，发布构建前必须全部通过。
 
 ## 使用流程
 
 1. 拖入数据文件，确认样品显隐。
 2. 选择材料窗口，修订波长范围。
-3. 运行 Raw Peak，检查峰位和质量标记。
+3. 运行 Raw Peak，检查峰位和质量标记，取消勾选需要忽略的峰。
 4. 选择拟合模型、基线、峰数，运行 Model Fit。
 5. 记录外延结构，保存 `.plproj`，导出图和结果表。
+6. 需要交付数据时，在左侧列表勾选曲线，点 `导出 Excel…` 生成一份工作簿。
 
 ## 发布
 
@@ -69,6 +76,7 @@ PL Analyzer Pro 是面向 MBE 与 III–V 族半导体研究的光致发光分�
 - [材料搜索窗口](docs/material_windows.md)
 - [v1.1.4 发布说明](docs/release_v1.1.4.md)
 - [v1.1.5 发布说明](docs/release_v1.1.5.md)
+- [v1.1.6 发布说明](docs/release_v1.1.6.md)
 
 ## 许可证
 

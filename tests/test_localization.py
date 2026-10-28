@@ -93,12 +93,21 @@ def test_chinese_main_window_uses_translated_presentation(
         assert window.windowTitle() == f"未命名 — PL Analyzer Pro v{__version__}"
         assert window.menuBar().actions()[0].text() == "文件(&F)"
         assert window._export_presentation_action.text() == "导出参考样式 PNG(&R)…"
+        assert window._export_spectra_action.text() == "导出已勾选曲线(&C)…"
+        assert window._sample_panel._export_button.text() == "导出 Excel…"
         assert (
             window._peak_panel._material_model.headerData(
                 0,
                 Qt.Orientation.Horizontal,
             )
             == "材料"
+        )
+        assert (
+            window._peak_panel._peak_model.headerData(
+                0,
+                Qt.Orientation.Horizontal,
+            )
+            == "勾选"
         )
         assert window._plot_widget._axes.get_xlabel() == "波长 (nm)"
     finally:

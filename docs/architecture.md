@@ -1,4 +1,4 @@
-# PL Analyzer Pro v1.1.4 架构
+# PL Analyzer Pro v1.1.6 架构
 
 ## 1. 架构目标
 
@@ -22,7 +22,7 @@ main.py / main_zh.py（语言入口与组合根）
 │   ├── presentation（全谱展示指标；与 Raw/Fit 指标隔离）
 │   └── fit_session（材料标注结果与工程序列化）
 ├── plotting（Matplotlib Qt adapter）
-└── export（Raw Peak / Fit 表格与参考样式 PNG/JSON/CSV adapters）
+└── export（Raw Peak / Fit 表格、勾选曲线 XLSX 与参考样式 PNG/JSON/CSV adapters）
 ```
 
 依赖原则：
@@ -58,6 +58,7 @@ main.py / main_zh.py（语言入口与组合根）
 | `analysis/presentation.py` | 展示用全谱主峰、基线半高宽、次峰、积分和噪声指标 |
 | `plotting/plot_widget.py` | 非破坏显示变换、Raw Peak 标记、拟合叠加和图像导出 |
 | `export/peak_table.py` | Raw Peak 的原子 XLSX/CSV 导出 |
+| `export/spectrum_table.py` | 勾选曲线的原子 XLSX 导出（逐曲线完整数据表 + 可选保留峰表） |
 | `export/fit_table.py` | 拟合参数与统计量的原子 XLSX/CSV 导出 |
 | `export/presentation_plot.py` | 参考样式 PNG 和可选指标 JSON/绘图 CSV 导出 |
 | `ui/peak_panel.py` | 多材料选择、项目内窗口编辑、候选标签表 |
@@ -85,6 +86,17 @@ main.py / main_zh.py（语言入口与组合根）
 13. Presentation 平滑只生成只读副本；Presentation FWHM 不得覆盖或冒充 Raw/Fit FWHM。
 14. 术语分层：Raw Peak 报告半 prominence 宽度，Presentation FWHM 是平滑展示指标，
     模型拟合 FWHM 来自 Gaussian/Lorentzian/Voigt/Pseudo-Voigt 联合优化。
+15. 寻峰结果的勾选/忽略是操作者决定，不改变检测结果本身：`RawPeakAnalyzer` 输出、
+    `.plproj` 中的 `analysis_results.raw_peak` 与峰位/峰高/FWHM 数值始终保留，
+    只有绘图标记、`复制勾选` 与导出选择遵循 `included` 状态。
+16. 勾选状态以“样品 ID + 峰位”为键，按样品隔离；重跑寻峰不会静默丢弃操作者已做出的
+    忽略决定，删除样品时对应记录一并丢弃。
+17. 勾选曲线的 Excel 导出只读 `SpectrumSeries` 与 `intensity_au`，不做归一化、偏移、
+    平滑或基线处理；显示层设置不影响导出数值。
+18. 峰表排序只改变视图行序（`PeakTableModel.sort`），不改变 Workspace 中的结果顺序、
+    导出顺序或峰身份；`复制勾选` 按当前视图顺序输出，因此粘贴结果与屏幕一致。
+19. `复制勾选` 的剪贴板契约固定为三列、无表头：`样品`、`峰位`（带 `nm` 单位）、`峰高`。
+    不复制材料、峰序号、FWHM、突出度、勾选状态和质量标记，也不随界面语言变化。
 
 ## 4. Origin 原生导入边界
 
@@ -201,7 +213,8 @@ project
 └── extensions
     ├── theme
     ├── fit_ui_settings
-    └── raw_peak_preferences
+    ├── raw_peak_preferences
+    └── ignored_peaks
 ```
 
 原始数组内嵌，工程恢复不依赖原数据路径；禁止 pickle 和非有限 JSON 数值。保存使用目标目录内
@@ -213,6 +226,11 @@ ID 和领域约束验证后再由主窗口一次性替换。
 `algaas_al040` 规范为材料数据库 v2 的稳定 ID，并同步迁移工程窗口、Raw Peak assignment
 和 Fit assignment；未知自定义材料 ID 保持不变。v2 → v3 迁移为每条光谱来源增加仪器元
 数据对象。
+
+`extensions.ignored_peaks` 保存寻峰勾选结果，结构为
+`[{"spectrum_id": str, "position_nm": float}, ...]`。它是可忽略的试验性字段：旧版本读到该键
+只会原样保存而不解读，因此仍是 schema 3 兼容；加载时只有样品 ID 存在、峰位为有限数值的
+条目会被采用，其余条目计入 Log 警告。该字段稳定后如需成为正式字段，再按迁移规则提升。
 
 ## 10. 后续版本扩展方式
 

@@ -77,6 +77,9 @@ NavigationToolbar 的 Python 定义文本由 `SpectrumPlotWidget` 显式翻译�
 | Raw Peak | 精确峰、非等间隔 FWHM、平台峰、缺失值、边界峰、物理 nm 间距 |
 | Material configuration | schema v2、默认/扩展窗口、空窗口结构条目 |
 | Workspace/export | 唯一样品名/颜色、材料标签聚合、XLSX 结果往返 |
+| Checked-curve export | 勾选曲线集、完整数据表、工作表命名/去重/31 字符上限、保留峰筛选、原子替换 |
+| Peak inclusion | 勾选/忽略语义、重跑寻峰保持决定、复制仅含勾选峰、三列无表头、工程恢复 |
+| Peak table sorting | 峰位/峰高数值排序、升降序切换、排序在刷新后保持、勾选状态随行 |
 | Fitting | 四种峰形、自动 BIC、双峰、联合基线、非破坏 Savitzky–Golay、稳定错误码 |
 | Presentation export | 基线半高宽语义、肩峰、真实像素尺寸、PNG/JSON/CSV 配套输出 |
 | Project persistence | 完整往返、原子保存失败保护、损坏文件、较新 schema、迁移步长 |
@@ -95,6 +98,13 @@ NavigationToolbar 的 Python 定义文本由 `SpectrumPlotWidget` 显式翻译�
 - 同一 OPJ/OPJU 的多个 worksheet 均可导入，Signal+Baseline 表只增加一个样品，错误
   worksheet 不影响同批其他数据；
 - PNG/SVG/PDF、Raw Peak XLSX/CSV、Fit XLSX/CSV 均可由目标应用重新打开。
+- 左侧列表勾选部分曲线后 `导出 Excel…` 只写出已勾选曲线；每条曲线的完整数据表（每一点
+  波长/强度）与只含保留峰的 `Peaks` 表数值与导入值一致，工作簿不含汇总/基本信息表；
+  未勾选曲线不出现在工作簿中。
+- Raw Peak 表取消勾选一个峰后，图上标记消失、`复制勾选` 内容不含该峰、峰表导出不含该峰；
+  重新勾选后恢复；重跑寻峰与保存/重开 `.plproj` 后勾选状态保持。
+- 点击 `峰位`、`峰高` 列标题在升序/降序间切换，行序随之变化且勾选状态跟随该峰；`复制勾选`
+  输出为无表头的 `样品	峰位 nm	峰高` 三列文本。
 - 仪器 DAT 导入后样品名、`Signal − Baseline`、Laser/Power/Temperature 元数据正确；仅一条
   光谱可见时可导出参考样式 PNG，并可选择 JSON/CSV 配套文件。
 
